@@ -11,6 +11,7 @@ A trainer-only Angular application for managing personal-training customers, reu
 - Set tracking for weight, reps, duration, distance, RPE, notes, and completion
 - Progress insights generated from the locally recorded data
 - Responsive desktop, tablet, and mobile layouts
+- Installable PWA with offline application-shell caching
 - Device-local persistence through a signal-based data store
 
 No account or cloud service is required. Records remain in the current browser's local storage. Clearing browser data removes the records, so this version should be treated as a local MVP rather than a production backup system.
