@@ -1,0 +1,9 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "ultimate-fitnezz-app",
+  "compatibility_date": "2026-08-02",
+  "assets": {
+    "directory": "./dist/ultimate-fitnezz/browser",
+    "not_found_handling": "single-page-application"
+  }
+}
