@@ -3,32 +3,32 @@ import { Routes } from '@angular/router';
 export const routes: Routes = [
   {
     path: '',
-    title: 'Home · Kinship',
+    title: "Home · BarBelle's Fitness Studio",
     loadComponent: () => import('./features/dashboard/dashboard').then((m) => m.Dashboard),
   },
   {
     path: 'clients',
-    title: 'People · Kinship',
+    title: "People · BarBelle's Fitness Studio",
     loadComponent: () => import('./features/clients/client-list/client-list').then((m) => m.ClientList),
   },
   {
     path: 'clients/:clientId',
-    title: 'Customer · Kinship',
+    title: "Customer · BarBelle's Fitness Studio",
     loadComponent: () => import('./features/clients/client-detail/client-detail').then((m) => m.ClientDetail),
   },
   {
     path: 'workouts',
-    title: 'Workout plans · Kinship',
+    title: "Workout plans · BarBelle's Fitness Studio",
     loadComponent: () => import('./features/workouts/workout-plans').then((m) => m.WorkoutPlans),
   },
   {
     path: 'progress',
-    title: 'Progress insights · Kinship',
+    title: "Progress insights · BarBelle's Fitness Studio",
     loadComponent: () => import('./features/progress/progress-overview').then((m) => m.ProgressOverview),
   },
   {
     path: 'session/new',
-    title: 'Record workout · Kinship',
+    title: "Record workout · BarBelle's Fitness Studio",
     loadComponent: () =>
       import('./features/workout-session/workout-session').then((m) => m.WorkoutSession),
   },

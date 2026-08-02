@@ -16,11 +16,11 @@ describe('App', () => {
     expect(app).toBeTruthy();
   });
 
-  it('should render the Kinship brand and primary navigation', async () => {
+  it("should render the BarBelle's brand and primary navigation", async () => {
     const fixture = TestBed.createComponent(App);
     await fixture.whenStable();
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('.brand')?.textContent).toContain('Kinship');
+    expect(compiled.querySelector('.brand')?.textContent).toContain("BarBelle's");
     expect(compiled.querySelector('nav[aria-label="Primary navigation"]')).toBeTruthy();
   });
 });

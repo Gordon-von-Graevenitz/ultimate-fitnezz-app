@@ -4,7 +4,7 @@
 .search-field input { width: 100%; padding: .55rem; border: 0; outline: 0; background: transparent; }
 .plan-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .85rem; }
 .plan-card { display: flex; min-width: 0; flex-direction: column; overflow: hidden; }
-.plan-art { display: grid; min-height: 7.8rem; place-content: center; background: radial-gradient(circle at 35% 25%, #f5b49e, transparent 34%), linear-gradient(135deg, var(--accent-soft), #f7efe7); text-align: center; }
+.plan-art { display: grid; min-height: 7.8rem; place-content: center; background: radial-gradient(circle at 35% 25%, var(--brand-pink), transparent 34%), linear-gradient(135deg, var(--accent-soft), var(--brand-gold-soft)); text-align: center; }
 .plan-art span { font-family: Georgia, 'Times New Roman', serif; font-size: 2.4rem; line-height: 1; }
 .plan-art small { color: var(--muted-ink); }
 .plan-copy { padding: 1.1rem 1.1rem .75rem; }
