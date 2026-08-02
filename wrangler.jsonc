@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "ultimate-fitnezz-app",
+  "name": "barbelles-fitness",
   "compatibility_date": "2026-08-02",
   "assets": {
     "directory": "./dist/ultimate-fitnezz/browser",
