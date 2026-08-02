@@ -1,0 +1,111 @@
+@if (client(); as person) {
+  <main class="detail-page">
+    <a class="back-link" routerLink="/clients"><span aria-hidden="true">←</span> All clients</a>
+
+    <header class="profile-header">
+      <div class="identity">
+        <span class="avatar" [style.background]="person.avatarColor">{{ initials(person.firstName, person.lastName) }}</span>
+        <div>
+          <div class="name-line">
+            <h1>{{ person.firstName }} {{ person.lastName }}</h1>
+            <span class="status" [class.inactive]="person.status === 'inactive'">{{ person.status }}</span>
+          </div>
+          <p>{{ person.email }} @if (person.phone) { <span>·</span> {{ person.phone }} }</p>
+          <small>Training together since {{ formatDate(person.joinedAt) }}</small>
+        </div>
+      </div>
+      <a class="primary-button" [routerLink]="['/session/new']" [queryParams]="{ clientId: person.id }">＋ Record workout</a>
+    </header>
+
+    <nav class="tabs" aria-label="Client sections">
+      <button type="button" [class.active]="activeTab() === 'overview'" (click)="setTab('overview')">Overview</button>
+      <button type="button" [class.active]="activeTab() === 'workouts'" (click)="setTab('workouts')">Workouts <span>{{ sessions().length }}</span></button>
+      <button type="button" [class.active]="activeTab() === 'progress'" (click)="setTab('progress')">Progress</button>
+    </nav>
+
+    @if (activeTab() === 'overview') {
+      <section class="stats" aria-label="Client snapshot">
+        <article><span>Completed sessions</span><strong>{{ completedSessions() }}</strong><small>All time</small></article>
+        <article><span>Current weight</span><strong>{{ latestMeasurement()?.bodyWeightKg ?? '—' }}<i>@if (latestMeasurement()?.bodyWeightKg) { kg }</i></strong><small>@if (weightChange() !== undefined) { {{ weightChange()! > 0 ? '+' : '' }}{{ weightChange()!.toFixed(1) }} kg overall } @else { Add another check-in }</small></article>
+        <article><span>Active goals</span><strong>{{ activeGoals().length }}</strong><small>{{ goals().length }} total</small></article>
+        <article><span>Progress photos</span><strong>{{ photos().length }}</strong><small>Private to this device</small></article>
+      </section>
+
+      <div class="overview-grid">
+        <section class="panel goals-panel">
+          <div class="section-heading"><div><p class="eyebrow">What matters now</p><h2>Goals</h2></div><button class="small-button" type="button" (click)="openGoal()">＋ Add goal</button></div>
+          @if (goals().length) {
+            <div class="goal-list">
+              @for (goal of goals().slice(0, 4); track goal.id) {
+                <article class="goal" [class.complete]="goal.status === 'achieved'">
+                  <button type="button" class="goal-check" [attr.aria-label]="goal.status === 'achieved' ? 'Mark goal active' : 'Mark goal achieved'" (click)="toggleGoal(goal)">{{ goal.status === 'achieved' ? '✓' : '' }}</button>
+                  <div><div class="goal-title"><h3>{{ goal.title }}</h3><span>{{ goal.category.replace('-', ' ') }}</span></div>
+                    @if (goal.targetValue) { <div class="progress-track"><span [style.width.%]="goalProgress(goal)"></span></div><p>{{ goal.currentValue ?? 0 }} / {{ goal.targetValue }} {{ goal.unit }}</p> }
+                    @else { <p>{{ goal.targetDate ? 'Target ' + formatDate(goal.targetDate) : 'Open-ended goal' }}</p> }
+                  </div>
+                </article>
+              }
+            </div>
+          } @else { <div class="panel-empty"><p>Set a meaningful first goal to give each session direction.</p><button type="button" (click)="openGoal()">Create a goal</button></div> }
+        </section>
+
+        <section class="panel notes-panel">
+          <div class="section-heading"><div><p class="eyebrow">Coach's corner</p><h2>About {{ person.firstName }}</h2></div></div>
+          <p class="coach-notes">{{ person.notes || 'No coaching notes yet. Add context such as preferences, limitations or motivations when you update this client.' }}</p>
+          <dl><div><dt>Email</dt><dd>{{ person.email }}</dd></div><div><dt>Phone</dt><dd>{{ person.phone || 'Not added' }}</dd></div><div><dt>Date of birth</dt><dd>{{ person.dateOfBirth ? formatDate(person.dateOfBirth) : 'Not added' }}</dd></div></dl>
+        </section>
+
+        <section class="panel recent-panel">
+          <div class="section-heading"><div><p class="eyebrow">Consistency</p><h2>Recent workouts</h2></div><button class="text-button" type="button" (click)="setTab('workouts')">View all →</button></div>
+          @if (sessions().length) { @for (session of sessions().slice(0, 3); track session.id) { <div class="session-row"><span class="session-mark" aria-hidden="true">{{ session.status === 'completed' ? '✓' : '○' }}</span><div><strong>{{ session.name }}</strong><span>{{ formatDate(session.startedAt) }} · {{ session.exercises.length }} exercises</span></div><small>{{ session.status }}</small></div> } }
+          @else { <div class="panel-empty"><p>No workouts recorded yet. Start the first one when you're together.</p><a [routerLink]="['/session/new']" [queryParams]="{ clientId: person.id }">Record first workout</a></div> }
+        </section>
+      </div>
+    }
+
+    @if (activeTab() === 'workouts') {
+      <section class="tab-panel">
+        <div class="section-heading"><div><p class="eyebrow">Training journal</p><h2>Workout history</h2></div><a class="primary-button" [routerLink]="['/session/new']" [queryParams]="{ clientId: person.id }">＋ Record workout</a></div>
+        @if (sessions().length) {
+          <div class="history-list">
+            @for (session of sessions(); track session.id) {
+              <article class="history-card"><div class="date-tile"><strong>{{ formatDate(session.startedAt).split(' ')[0] }}</strong><span>{{ formatDate(session.startedAt).split(' ').slice(1).join(' ') }}</span></div><div class="history-main"><div><h3>{{ session.name }}</h3><p>{{ session.exercises.length }} exercises · {{ completedSets(session.id) }} completed sets</p></div><span class="status" [class.inactive]="session.status !== 'completed'">{{ session.status }}</span>@if (session.notes) { <blockquote>{{ session.notes }}</blockquote> }</div></article>
+            }
+          </div>
+        } @else { <div class="large-empty"><span aria-hidden="true">↗</span><h3>Your training story starts here</h3><p>Record the first workout to begin building {{ person.firstName }}'s history.</p></div> }
+      </section>
+    }
+
+    @if (activeTab() === 'progress') {
+      <section class="tab-panel">
+        <div class="section-heading progress-heading"><div><p class="eyebrow">The whole picture</p><h2>Progress timeline</h2></div><div><button class="small-button" type="button" (click)="isPhotoOpen.set(true)">＋ Photo</button><button class="primary-button" type="button" (click)="openMeasurement()">＋ Check-in</button></div></div>
+        <div class="progress-layout">
+          <div class="panel measurement-panel">
+            <h3>Measurements</h3>
+            @if (measurements().length) { <div class="measurement-list">@for (measurement of measurements(); track measurement.id) { <article><time>{{ formatDate(measurement.recordedAt) }}</time><div class="measure-values">@if (measurement.bodyWeightKg) { <span><strong>{{ measurement.bodyWeightKg }}</strong> kg</span> } @if (measurement.bodyFatPercent) { <span><strong>{{ measurement.bodyFatPercent }}</strong> % fat</span> } @if (measurement.waistCm) { <span><strong>{{ measurement.waistCm }}</strong> cm waist</span> } @if (measurement.restingHeartRateBpm) { <span><strong>{{ measurement.restingHeartRateBpm }}</strong> bpm</span> }</div>@if (measurement.notes) { <p>{{ measurement.notes }}</p> }</article> }</div> }
+            @else { <div class="panel-empty"><p>No check-ins yet. Measurements are most useful when captured consistently.</p><button type="button" (click)="openMeasurement()">Add first check-in</button></div> }
+          </div>
+          <div class="panel photo-panel">
+            <h3>Progress photos</h3>
+            @if (photos().length) { <div class="photo-grid">@for (photo of photos(); track photo.id) { <figure>@if (photo.localPreviewUrl) { <img [src]="photo.localPreviewUrl" [alt]="photo.caption || photo.angle + ' progress photo'" /> } @else { <div class="photo-placeholder"><span>Photo</span></div> }<figcaption><strong>{{ photo.angle }}</strong><span>{{ formatDate(photo.recordedAt) }}</span></figcaption></figure> }</div> }
+            @else { <div class="panel-empty"><p>Photos stay on this device and provide a visual record alongside the numbers.</p><button type="button" (click)="isPhotoOpen.set(true)">Add a photo</button></div> }
+          </div>
+        </div>
+      </section>
+    }
+  </main>
+} @else {
+  <main class="not-found"><span>404</span><h1>Client not found</h1><p>This profile may have been removed, or the link is no longer valid.</p><a class="primary-button" routerLink="/clients">Back to clients</a></main>
+}
+
+@if (isMeasurementOpen()) {
+  <div class="modal-backdrop" (click)="isMeasurementOpen.set(false)"><section class="modal wide-modal" role="dialog" aria-modal="true" aria-labelledby="measurement-title" (click)="$event.stopPropagation()"><div class="modal-header"><div><p class="eyebrow">Progress check-in</p><h2 id="measurement-title">Add measurements</h2></div><button class="icon-button" type="button" aria-label="Close" (click)="isMeasurementOpen.set(false)">×</button></div><form [formGroup]="measurementForm" (ngSubmit)="saveMeasurement()"><div class="form-grid measurement-form"><label>Recorded on<input type="date" formControlName="recordedAt" /></label><label>Weight (kg)<input type="number" min="0" step="0.1" formControlName="bodyWeightKg" /></label><label>Body fat (%)<input type="number" min="0" max="100" step="0.1" formControlName="bodyFatPercent" /></label><label>Resting heart rate<input type="number" min="0" formControlName="restingHeartRateBpm" /></label><label>Chest (cm)<input type="number" min="0" step="0.1" formControlName="chestCm" /></label><label>Waist (cm)<input type="number" min="0" step="0.1" formControlName="waistCm" /></label><label>Hips (cm)<input type="number" min="0" step="0.1" formControlName="hipsCm" /></label><label>Left arm (cm)<input type="number" min="0" step="0.1" formControlName="leftArmCm" /></label><label>Right arm (cm)<input type="number" min="0" step="0.1" formControlName="rightArmCm" /></label><label>Left thigh (cm)<input type="number" min="0" step="0.1" formControlName="leftThighCm" /></label><label>Right thigh (cm)<input type="number" min="0" step="0.1" formControlName="rightThighCm" /></label><label class="wide">Notes<textarea rows="3" formControlName="notes"></textarea></label></div><div class="modal-actions"><button class="text-button" type="button" (click)="isMeasurementOpen.set(false)">Cancel</button><button class="primary-button" type="submit">Save check-in</button></div></form></section></div>
+}
+
+@if (isGoalOpen()) {
+  <div class="modal-backdrop" (click)="isGoalOpen.set(false)"><section class="modal" role="dialog" aria-modal="true" aria-labelledby="goal-title" (click)="$event.stopPropagation()"><div class="modal-header"><div><p class="eyebrow">A clear direction</p><h2 id="goal-title">Create a goal</h2></div><button class="icon-button" type="button" aria-label="Close" (click)="isGoalOpen.set(false)">×</button></div><form [formGroup]="goalForm" (ngSubmit)="saveGoal()"><div class="form-grid"><label class="wide">Goal title <span>*</span><input formControlName="title" placeholder="What are we working toward?" /></label><label>Category<select formControlName="category"><option value="strength">Strength</option><option value="body-composition">Body composition</option><option value="endurance">Endurance</option><option value="mobility">Mobility</option><option value="habit">Habit</option><option value="other">Other</option></select></label><label>Target date<input type="date" formControlName="targetDate" /></label><label>Current value<input type="number" formControlName="currentValue" /></label><label>Target value<input type="number" formControlName="targetValue" /></label><label>Unit<input formControlName="unit" placeholder="kg, reps, minutes…" /></label><label class="wide">Notes<textarea rows="3" formControlName="notes"></textarea></label></div><div class="modal-actions"><button class="text-button" type="button" (click)="isGoalOpen.set(false)">Cancel</button><button class="primary-button" type="submit">Save goal</button></div></form></section></div>
+}
+
+@if (isPhotoOpen()) {
+  <div class="modal-backdrop" (click)="isPhotoOpen.set(false)"><section class="modal" role="dialog" aria-modal="true" aria-labelledby="photo-title" (click)="$event.stopPropagation()"><div class="modal-header"><div><p class="eyebrow">Visual progress</p><h2 id="photo-title">Add a progress photo</h2></div><button class="icon-button" type="button" aria-label="Close" (click)="isPhotoOpen.set(false)">×</button></div><form [formGroup]="photoForm" (ngSubmit)="savePhoto()"><label class="photo-drop">@if (photoPreview()) { <img [src]="photoPreview()" alt="Selected progress preview" /> } @else { <span aria-hidden="true">＋</span><strong>Choose a photo</strong><small>JPG, PNG or HEIC</small> }<input type="file" accept="image/*" (change)="choosePhoto($event)" /></label><div class="form-grid"><label>Date<input type="date" formControlName="recordedAt" /></label><label>Angle<select formControlName="angle"><option value="front">Front</option><option value="side">Side</option><option value="back">Back</option><option value="other">Other</option></select></label><label class="wide">Caption<input formControlName="caption" placeholder="Optional note about this photo" /></label></div><p class="privacy-note">Stored locally for this prototype. Images will not sync to another device.</p><div class="modal-actions"><button class="text-button" type="button" (click)="isPhotoOpen.set(false)">Cancel</button><button class="primary-button" type="submit" [disabled]="!photoFileName()">Save photo</button></div></form></section></div>
+}

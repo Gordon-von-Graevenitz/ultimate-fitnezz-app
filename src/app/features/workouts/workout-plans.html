@@ -1,0 +1,43 @@
+<header class="plans-header">
+  <div><p class="eyebrow">Workout library</p><h1 class="page-title">Plans made to be lived in.</h1><p class="page-intro">Build reusable sessions, then adjust the details for the person in front of you.</p></div>
+  <button class="button primary" type="button" (click)="openEditor()"><span aria-hidden="true">＋</span> New plan</button>
+</header>
+
+<div class="plan-toolbar panel">
+  <label class="search-field"><span class="sr-only">Search workout plans</span><span aria-hidden="true">⌕</span><input type="search" placeholder="Search plans" [value]="search()" (input)="search.set($any($event.target).value)" /></label>
+  <span>{{ visibleTemplates().length }} saved {{ visibleTemplates().length === 1 ? 'plan' : 'plans' }}</span>
+</div>
+
+<section class="plan-grid">
+  @for (template of visibleTemplates(); track template.id) {
+    <article class="plan-card panel">
+      <div class="plan-art" aria-hidden="true"><span>{{ template.exercises.length }}</span><small>movements</small></div>
+      <div class="plan-copy"><span class="plan-type">Training template</span><h2>{{ template.name }}</h2><p>{{ template.description || 'A flexible session ready to tailor to your customer.' }}</p></div>
+      <div class="exercise-preview">
+        @for (item of template.exercises.slice(0, 3); track item.id; let index = $index) {
+          <span><i>{{ index + 1 }}</i>{{ exerciseName(item.exerciseId) }}<small>{{ item.sets.length }} sets</small></span>
+        }
+        @if (template.exercises.length > 3) {<span class="more">+ {{ template.exercises.length - 3 }} more</span>}
+      </div>
+      <footer><a class="button primary" [routerLink]="['/session/new']" [queryParams]="{ template: template.id }">Use plan</a><button class="button ghost delete-action" type="button" (click)="removePlan(template)">Delete</button></footer>
+    </article>
+  } @empty {
+    <div class="empty-state panel"><span aria-hidden="true">▤</span><h2>No plans found</h2><p>Create a reusable workout or change your search.</p><button class="button primary" type="button" (click)="openEditor()">Create a plan</button></div>
+  }
+</section>
+
+@if (editorOpen()) {
+  <div class="dialog-backdrop" (click)="closeEditor()">
+    <section class="plan-dialog" role="dialog" aria-modal="true" aria-labelledby="new-plan-title" (click)="$event.stopPropagation()">
+      <header><div><p class="eyebrow">Workout template</p><h2 id="new-plan-title">Create a new plan</h2></div><button class="close-button" type="button" aria-label="Close" (click)="closeEditor()">×</button></header>
+      <form [formGroup]="planForm" (ngSubmit)="savePlan()">
+        <div class="form-grid">
+          <div class="field"><label for="plan-name">Plan name</label><input id="plan-name" formControlName="name" placeholder="e.g. Lower strength" />@if (planForm.controls.name.touched && planForm.controls.name.invalid) {<small>Enter a name for this plan.</small>}</div>
+          <div class="field"><label for="plan-description">Description</label><textarea id="plan-description" formControlName="description" placeholder="What is this session designed to achieve?"></textarea></div>
+        </div>
+        <fieldset><legend>Choose exercises <span>{{ selectedExerciseIds().size }} selected</span></legend><div class="exercise-picker">@for (exercise of exercises(); track trackExercise(exercise)) {<label [class.selected]="selectedExerciseIds().has(exercise.id)"><input type="checkbox" [checked]="selectedExerciseIds().has(exercise.id)" (change)="toggleExercise(exercise.id)" /><span><strong>{{ exercise.name }}</strong><small>{{ exercise.category }} · {{ exercise.equipment }}</small></span><i aria-hidden="true">{{ selectedExerciseIds().has(exercise.id) ? '✓' : '+' }}</i></label>}</div>@if (planForm.touched && selectedExerciseIds().size === 0) {<p class="selection-error">Choose at least one exercise.</p>}</fieldset>
+        <footer><button class="button" type="button" (click)="closeEditor()">Cancel</button><button class="button primary" type="submit">Save plan</button></footer>
+      </form>
+    </section>
+  </div>
+}

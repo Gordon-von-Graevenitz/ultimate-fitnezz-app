@@ -1,0 +1,76 @@
+<section class="welcome">
+  <div>
+    <p class="eyebrow">Your coaching day</p>
+    <h1 class="page-title">Good morning, Wesley.</h1>
+    <p class="page-intro">Keep every customer moving forward, one considered session at a time.</p>
+  </div>
+  <div class="welcome-actions">
+    <a class="button" routerLink="/clients">View customers</a>
+    <a class="button primary" routerLink="/session/new"><span aria-hidden="true">＋</span> Record workout</a>
+  </div>
+</section>
+
+<section class="stat-grid" aria-label="Coaching overview">
+  <article class="stat panel">
+    <span class="stat-icon clay" aria-hidden="true">◎</span>
+    <div><span class="stat-value">{{ activeClientCount() }}</span><span class="stat-label">Active customers</span></div>
+    <span class="stat-note">Saved on this device</span>
+  </article>
+  <article class="stat panel">
+    <span class="stat-icon green" aria-hidden="true">✓</span>
+    <div><span class="stat-value">{{ completedSessionCount() }}</span><span class="stat-label">Completed sessions</span></div>
+    <span class="stat-note positive">{{ plannedSessionCount() }} planned next</span>
+  </article>
+  <article class="stat panel">
+    <span class="stat-icon blue" aria-hidden="true">↗</span>
+    <div><span class="stat-value">{{ adherence() }}%</span><span class="stat-label">Average adherence</span></div>
+    <span class="stat-note positive">Across saved sessions</span>
+  </article>
+</section>
+
+<div class="dashboard-grid">
+  <section class="panel next-session">
+    <header class="section-heading">
+      <div><p class="eyebrow">Up next</p><h2>Continue Maya’s momentum</h2></div>
+      <span class="time-pill">09:00</span>
+    </header>
+
+    <div class="customer-row featured">
+      <span class="avatar clay">MC</span>
+      <div><strong>Maya Thompson</strong><span>Lower strength · Week 6 of 12</span></div>
+      <a class="text-link" routerLink="/clients/client-maya">View profile →</a>
+    </div>
+
+    <div class="session-preview">
+      <div><span class="exercise-number">01</span><span><strong>Back squat</strong><small>3 sets · 8 reps</small></span></div>
+      <div><span class="exercise-number">02</span><span><strong>Romanian deadlift</strong><small>3 sets · 10 reps</small></span></div>
+      <div><span class="exercise-number">03</span><span><strong>Walking lunge</strong><small>3 sets · 12 reps</small></span></div>
+    </div>
+    <a class="button primary start-button" routerLink="/session/new">Start this session <span aria-hidden="true">→</span></a>
+  </section>
+
+  <section class="panel schedule">
+    <header class="section-heading compact"><div><p class="eyebrow">Schedule</p><h2>Today</h2></div><span class="muted">5 sessions</span></header>
+    <div class="schedule-list">
+      @for (item of upcoming; track item.name) {
+        <div class="customer-row">
+          <span class="avatar" [class]="item.tone">{{ item.initials }}</span>
+          <div><strong>{{ item.name }}</strong><span>{{ item.focus }}</span></div>
+          <time>{{ item.time }}</time>
+        </div>
+      }
+    </div>
+    <a class="button schedule-action" routerLink="/clients">See all customers</a>
+  </section>
+
+  <section class="panel attention">
+    <header class="section-heading compact"><div><p class="eyebrow">Coach focus</p><h2>Needs attention</h2></div></header>
+    @for (item of attention; track item.name) {
+      <div class="attention-row">
+        <span class="avatar neutral">{{ item.initials }}</span>
+        <div><strong>{{ item.name }}</strong><span>{{ item.reason }}</span></div>
+        <a class="text-link" routerLink="/clients">{{ item.action }} →</a>
+      </div>
+    }
+  </section>
+</div>

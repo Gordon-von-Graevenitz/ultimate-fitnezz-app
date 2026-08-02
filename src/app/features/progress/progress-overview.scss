@@ -1,0 +1,39 @@
+.progress-header { display: flex; align-items: end; justify-content: space-between; gap: 2rem; margin-bottom: 1.5rem; }
+.customer-picker { display: grid; gap: .35rem; min-width: 14rem; color: var(--muted-ink); font-size: .75rem; font-weight: 700; }
+.customer-picker select { min-height: 2.75rem; padding: .65rem .8rem; border: 1px solid var(--line); border-radius: .8rem; color: var(--ink); background: var(--surface); }
+.customer-context { display: flex; align-items: center; gap: 1rem; padding: 1rem 1.2rem; margin-bottom: .85rem; }
+.large-avatar { display: grid; place-items: center; width: 3.4rem; height: 3.4rem; border-radius: 1rem; color: var(--accent-strong); background: var(--accent-soft); font-weight: 800; }
+.customer-context div { flex: 1; }
+.context-label, .metric-label, .metric-detail { display: block; color: var(--muted-ink); font-size: .75rem; }
+.customer-context h2 { margin: .2rem 0 0; font-family: Georgia, 'Times New Roman', serif; font-size: 1.3rem; font-weight: 500; }
+.insight-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: .85rem; margin-bottom: .85rem; }
+.insight-stats article { padding: 1rem; }
+.insight-stats strong { display: block; margin-block: .35rem .15rem; font-family: Georgia, 'Times New Roman', serif; font-size: 1.8rem; font-weight: 500; }
+.metric-detail.positive { color: var(--positive); }
+.insight-layout { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(17rem, .65fr); gap: .85rem; }
+.chart-panel, .record-panel, .adherence-panel { padding: clamp(1rem, 3vw, 1.4rem); }
+.chart-panel { grid-row: span 2; }
+.chart-panel header, .record-panel header, .adherence-panel header { display: flex; align-items: start; justify-content: space-between; gap: 1rem; }
+.chart-panel h2, .record-panel h2, .adherence-panel h2 { margin: 0; font-family: Georgia, 'Times New Roman', serif; font-size: 1.45rem; font-weight: 500; }
+.bar-chart { display: grid; grid-template-columns: repeat(6, 1fr); gap: .7rem; align-items: end; min-height: 13rem; padding: 1.5rem .4rem .7rem; border-bottom: 1px solid var(--line); background: repeating-linear-gradient(to bottom, transparent 0, transparent 3.25rem, var(--line) calc(3.25rem + 1px)); }
+.bar-column { display: grid; justify-items: center; align-items: end; gap: .4rem; height: 11.5rem; }
+.bar { width: min(2.2rem, 70%); align-self: end; border-radius: .65rem .65rem .2rem .2rem; background: linear-gradient(to top, var(--accent), #ed987c); }
+.bar-value { margin-top: auto; color: var(--muted-ink); font-size: .68rem; }
+.bar-label { color: var(--muted-ink); font-size: .7rem; }
+.chart-note { margin: 1rem 0 0; color: var(--muted-ink); font-size: .76rem; }
+.chart-empty { display: grid; min-height: 13rem; margin-top: 1rem; place-items: center; padding: 2rem; border: 1px dashed var(--line); border-radius: 1rem; color: var(--muted-ink); text-align: center; }
+.record-list { margin-top: .8rem; }
+.record-row { display: grid; grid-template-columns: auto 1fr auto; gap: .7rem; align-items: center; padding: .85rem 0; border-top: 1px solid var(--line); font-size: .82rem; }
+.record-row div span { display: block; color: var(--muted-ink); font-size: .72rem; }
+.trophy { display: grid; place-items: center; width: 2rem; height: 2rem; border-radius: 50%; color: var(--warning); background: var(--warning-soft); }
+.adherence-panel header > strong { color: var(--positive); }
+.adherence-track { height: .55rem; margin: 1rem 0 1.25rem; overflow: hidden; border-radius: 99px; background: var(--positive-soft); }
+.adherence-track span { display: block; height: 100%; border-radius: inherit; background: var(--positive); }
+.week-dots { display: grid; gap: .65rem; }
+.week-dots div { display: flex; align-items: center; gap: .45rem; }
+.week-label { width: 1.8rem; color: var(--muted-ink); font-size: .68rem; }
+.week-dots i { width: .85rem; height: .85rem; border-radius: 50%; background: var(--positive); }
+.week-dots i.missed { background: var(--line); }
+@media (max-width: 850px) { .insight-stats { grid-template-columns: repeat(2, 1fr); } .insight-layout { grid-template-columns: 1fr; } .chart-panel { grid-row: auto; } }
+@media (max-width: 620px) { .progress-header { display: grid; gap: 1rem; } .customer-picker { width: 100%; } .customer-context { align-items: start; flex-wrap: wrap; } .customer-context .button { width: 100%; } .insight-stats { grid-template-columns: 1fr 1fr; } .bar-chart { gap: .25rem; } }
+@media (max-width: 400px) { .insight-stats { grid-template-columns: 1fr; } }

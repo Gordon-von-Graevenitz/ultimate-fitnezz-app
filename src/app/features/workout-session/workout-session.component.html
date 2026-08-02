@@ -1,0 +1,275 @@
+<main class="session-shell">
+  <header class="session-header">
+    <button class="icon-button" type="button" aria-label="Cancel and go back" (click)="cancelWorkout()">
+      <span aria-hidden="true">←</span>
+    </button>
+
+    <div class="client-heading">
+      <span class="eyebrow">Live session</span>
+      <label class="sr-only" for="client-select">Customer</label>
+      <select
+        id="client-select"
+        class="client-select"
+        [ngModel]="selectedClientId()"
+        (ngModelChange)="updateClient($event)"
+      >
+        @for (client of clients(); track client.id) {
+          <option [value]="client.id">{{ client.firstName }} {{ client.lastName }}</option>
+        }
+      </select>
+      <label class="sr-only" for="session-name">Workout name</label>
+      <input
+        id="session-name"
+        class="session-name"
+        type="text"
+        [ngModel]="sessionName()"
+        (ngModelChange)="updateSessionName($event)"
+      />
+    </div>
+
+    <div class="elapsed" aria-label="Elapsed workout time">
+      <span>Elapsed</span>
+      <strong>{{ elapsedLabel() }}</strong>
+    </div>
+  </header>
+
+  <section class="session-overview" aria-label="Workout progress">
+    <div class="progress-copy">
+      <strong>{{ completedSetCount() }} of {{ totalSetCount() }} sets</strong>
+      <span>{{ progressPercent() }}% complete</span>
+    </div>
+    <div
+      class="progress-track"
+      role="progressbar"
+      aria-label="Workout completion"
+      aria-valuemin="0"
+      aria-valuemax="100"
+      [attr.aria-valuenow]="progressPercent()"
+    >
+      <span [style.width.%]="progressPercent()"></span>
+    </div>
+
+    @if (restSecondsRemaining() > 0) {
+      <div class="rest-timer" role="timer" aria-live="polite">
+        <div class="rest-icon" aria-hidden="true">◷</div>
+        <div>
+          <span>Rest timer</span>
+          <strong>{{ restLabel() }}</strong>
+        </div>
+        <button type="button" (click)="startRestTimer(30)">+30 sec</button>
+        <button class="quiet-button" type="button" (click)="stopRestTimer()">Skip</button>
+      </div>
+    } @else {
+      <button class="start-rest-button" type="button" (click)="startRestTimer()">
+        <span aria-hidden="true">◷</span> Start 90-sec rest
+      </button>
+    }
+  </section>
+
+  <section class="exercise-list" aria-label="Exercises">
+    @for (exercise of exercises(); track exercise.id; let exerciseIndex = $index) {
+      <article class="exercise-card">
+        <header class="exercise-header">
+          <div class="exercise-number">{{ exerciseIndex + 1 }}</div>
+          <div>
+            <h2>{{ exercise.name }}</h2>
+            <p>{{ exercise.target }}</p>
+          </div>
+          <button
+            class="icon-button remove-exercise"
+            type="button"
+            [attr.aria-label]="'Remove ' + exercise.name"
+            (click)="removeExercise(exercise.id)"
+          >
+            <span aria-hidden="true">•••</span>
+          </button>
+        </header>
+
+        <div class="sets-scroll" tabindex="0" aria-label="Scrollable set entry table">
+          <div class="set-grid set-grid-head" aria-hidden="true">
+            <span>Set</span>
+            <span>kg</span>
+            <span>Reps</span>
+            <span>Secs</span>
+            <span>Metres</span>
+            <span>RPE</span>
+            <span>Notes</span>
+            <span>Done</span>
+            <span></span>
+          </div>
+
+          @for (set of exercise.sets; track set.id) {
+            <div class="set-grid set-row" [class.is-complete]="set.completed">
+              <strong class="set-index" [attr.aria-label]="'Set ' + setNumber(exercise.id, set.id)">
+                {{ setNumber(exercise.id, set.id) }}
+              </strong>
+
+              <label [for]="controlId(exercise.id, set.id, 'weightKg')">
+                <span class="mobile-label">Weight (kg)</span>
+                <input
+                  [id]="controlId(exercise.id, set.id, 'weightKg')"
+                  type="number"
+                  inputmode="decimal"
+                  min="0"
+                  step="0.5"
+                  placeholder="—"
+                  [ngModel]="set.weightKg"
+                  (ngModelChange)="updateSet(exercise.id, set.id, 'weightKg', $event)"
+                />
+              </label>
+
+              <label [for]="controlId(exercise.id, set.id, 'reps')">
+                <span class="mobile-label">Reps</span>
+                <input
+                  [id]="controlId(exercise.id, set.id, 'reps')"
+                  type="number"
+                  inputmode="numeric"
+                  min="0"
+                  step="1"
+                  placeholder="—"
+                  [ngModel]="set.reps"
+                  (ngModelChange)="updateSet(exercise.id, set.id, 'reps', $event)"
+                />
+              </label>
+
+              <label [for]="controlId(exercise.id, set.id, 'durationSeconds')">
+                <span class="mobile-label">Duration (sec)</span>
+                <input
+                  [id]="controlId(exercise.id, set.id, 'durationSeconds')"
+                  type="number"
+                  inputmode="numeric"
+                  min="0"
+                  step="1"
+                  placeholder="—"
+                  [ngModel]="set.durationSeconds"
+                  (ngModelChange)="updateSet(exercise.id, set.id, 'durationSeconds', $event)"
+                />
+              </label>
+
+              <label [for]="controlId(exercise.id, set.id, 'distanceMeters')">
+                <span class="mobile-label">Distance (m)</span>
+                <input
+                  [id]="controlId(exercise.id, set.id, 'distanceMeters')"
+                  type="number"
+                  inputmode="decimal"
+                  min="0"
+                  step="10"
+                  placeholder="—"
+                  [ngModel]="set.distanceMeters"
+                  (ngModelChange)="updateSet(exercise.id, set.id, 'distanceMeters', $event)"
+                />
+              </label>
+
+              <label [for]="controlId(exercise.id, set.id, 'rpe')">
+                <span class="mobile-label">RPE</span>
+                <select
+                  [id]="controlId(exercise.id, set.id, 'rpe')"
+                  [ngModel]="set.rpe"
+                  (ngModelChange)="updateSet(exercise.id, set.id, 'rpe', $event)"
+                >
+                  <option [ngValue]="null">—</option>
+                  @for (rpe of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]; track rpe) {
+                    <option [ngValue]="rpe">{{ rpe }}</option>
+                  }
+                </select>
+              </label>
+
+              <label [for]="controlId(exercise.id, set.id, 'notes')">
+                <span class="mobile-label">Set notes</span>
+                <input
+                  [id]="controlId(exercise.id, set.id, 'notes')"
+                  class="notes-input"
+                  type="text"
+                  placeholder="Optional note"
+                  [ngModel]="set.notes"
+                  (ngModelChange)="updateSet(exercise.id, set.id, 'notes', $event)"
+                />
+              </label>
+
+              <label class="complete-toggle" [for]="controlId(exercise.id, set.id, 'completed')">
+                <input
+                  [id]="controlId(exercise.id, set.id, 'completed')"
+                  type="checkbox"
+                  [checked]="set.completed"
+                  (change)="toggleSet(exercise.id, set.id, $any($event.target).checked)"
+                />
+                <span aria-hidden="true">✓</span>
+                <span class="sr-only">Mark set {{ setNumber(exercise.id, set.id) }} complete</span>
+              </label>
+
+              <button
+                class="remove-set"
+                type="button"
+                [attr.aria-label]="'Remove set ' + setNumber(exercise.id, set.id)"
+                [disabled]="exercise.sets.length === 1"
+                (click)="removeSet(exercise.id, set.id)"
+              >
+                <span aria-hidden="true">×</span>
+              </button>
+            </div>
+          }
+        </div>
+
+        <div class="exercise-actions">
+          <button class="add-set" type="button" (click)="addSet(exercise.id)">
+            <span aria-hidden="true">＋</span> Add set
+          </button>
+          <label class="exercise-notes">
+            <span>Exercise note</span>
+            <input
+              type="text"
+              placeholder="Tempo, setup, coaching cue…"
+              [ngModel]="exercise.notes"
+              (ngModelChange)="updateExerciseNotes(exercise.id, $event)"
+            />
+          </label>
+        </div>
+      </article>
+    }
+
+    @if (isAddingExercise()) {
+      <div class="exercise-picker">
+        <label for="exercise-picker"><strong>Add an exercise</strong></label>
+        <select
+          id="exercise-picker"
+          [ngModel]="exerciseToAdd()"
+          (ngModelChange)="updateExerciseToAdd($event)"
+        >
+          @for (exercise of exerciseOptions(); track exercise.id) {
+            <option [value]="exercise.id">
+              {{ exercise.name }} · {{ exercise.primaryMuscleGroup }}
+            </option>
+          }
+        </select>
+        <button class="cancel-button" type="button" (click)="closeExercisePicker()">Cancel</button>
+        <button class="finish-button" type="button" (click)="addExercise()">Add exercise</button>
+      </div>
+    } @else {
+      <button class="add-exercise" type="button" (click)="openExercisePicker()">
+        <span aria-hidden="true">＋</span>
+        <span><strong>Add exercise</strong><small>Build the session as you go</small></span>
+      </button>
+    }
+  </section>
+
+  <section class="session-notes">
+    <label for="session-notes"><strong>Session notes</strong></label>
+    <textarea
+      id="session-notes"
+      rows="3"
+      placeholder="How did the client feel? Add an overall coaching note…"
+      [ngModel]="sessionNotes()"
+      (ngModelChange)="updateSessionNotes($event)"
+    ></textarea>
+  </section>
+
+  <footer class="session-footer">
+    <p aria-live="polite">{{ statusMessage() }}</p>
+    <div>
+      <button class="cancel-button" type="button" (click)="cancelWorkout()">Cancel workout</button>
+      <button class="finish-button" type="button" [disabled]="isSaving()" (click)="finishWorkout()">
+        <span aria-hidden="true">✓</span> {{ isSaving() ? 'Saving…' : 'Finish workout' }}
+      </button>
+    </div>
+  </footer>
+</main>

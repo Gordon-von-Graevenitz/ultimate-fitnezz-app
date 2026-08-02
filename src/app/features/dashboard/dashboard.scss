@@ -1,0 +1,267 @@
+.welcome {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 2rem;
+  margin-bottom: 2rem;
+}
+
+.welcome-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  flex: 0 0 auto;
+}
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.85rem;
+  margin-bottom: 0.85rem;
+}
+
+.stat {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.2rem 0.85rem;
+  align-items: center;
+  padding: 1rem;
+}
+
+.stat-icon,
+.avatar {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  font-weight: 800;
+}
+
+.stat-icon {
+  grid-row: span 2;
+  width: 2.65rem;
+  height: 2.65rem;
+}
+
+.stat-value,
+.stat-label {
+  display: block;
+}
+
+.stat-value {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 1.55rem;
+  line-height: 1;
+}
+
+.stat-label,
+.stat-note {
+  color: var(--muted-ink);
+  font-size: 0.76rem;
+}
+
+.stat-note {
+  grid-column: 2;
+}
+
+.positive {
+  color: var(--positive);
+}
+
+.clay { color: var(--accent-strong); background: var(--accent-soft); }
+.green { color: var(--positive); background: var(--positive-soft); }
+.blue { color: var(--info); background: var(--info-soft); }
+.neutral { color: var(--muted-ink); background: #f1ece5; }
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(17rem, 0.8fr);
+  gap: 0.85rem;
+}
+
+.next-session,
+.schedule,
+.attention {
+  padding: clamp(1.1rem, 3vw, 1.5rem);
+}
+
+.next-session {
+  grid-row: span 2;
+}
+
+.section-heading {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.15rem;
+}
+
+.section-heading h2 {
+  margin: 0;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: clamp(1.35rem, 3vw, 1.75rem);
+  font-weight: 500;
+}
+
+.section-heading.compact {
+  align-items: end;
+}
+
+.time-pill {
+  padding: 0.4rem 0.65rem;
+  border-radius: 999px;
+  color: var(--accent-strong);
+  background: var(--accent-soft);
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.customer-row,
+.attention-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.customer-row.featured {
+  margin-bottom: 1.1rem;
+  padding: 0.9rem;
+  border-radius: 0.9rem;
+  background: var(--accent-soft);
+}
+
+.avatar {
+  width: 2.4rem;
+  height: 2.4rem;
+  font-size: 0.72rem;
+}
+
+.customer-row > div,
+.attention-row > div {
+  min-width: 0;
+  flex: 1;
+}
+
+.customer-row strong,
+.customer-row span,
+.attention-row strong,
+.attention-row span {
+  display: block;
+}
+
+.customer-row span,
+.attention-row span,
+.customer-row time {
+  color: var(--muted-ink);
+  font-size: 0.76rem;
+}
+
+.text-link {
+  color: var(--accent-strong);
+  text-decoration: none;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.session-preview {
+  border-block: 1px solid var(--line);
+}
+
+.session-preview > div {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.95rem 0.2rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.session-preview > div:last-child {
+  border-bottom: 0;
+}
+
+.session-preview span,
+.session-preview small,
+.session-preview strong {
+  display: block;
+}
+
+.exercise-number {
+  color: var(--faint-ink);
+  font-family: Georgia, 'Times New Roman', serif;
+}
+
+.session-preview small {
+  margin-top: 0.15rem;
+  color: var(--muted-ink);
+}
+
+.start-button {
+  width: 100%;
+  margin-top: 1.2rem;
+}
+
+.schedule-list {
+  display: grid;
+}
+
+.schedule-list .customer-row,
+.attention-row {
+  padding: 0.8rem 0;
+  border-top: 1px solid var(--line);
+}
+
+.schedule-action {
+  width: 100%;
+  margin-top: 0.9rem;
+}
+
+.attention-row .text-link {
+  white-space: nowrap;
+}
+
+@media (max-width: 850px) {
+  .stat-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .next-session {
+    grid-row: auto;
+  }
+}
+
+@media (max-width: 620px) {
+  .welcome {
+    display: grid;
+    gap: 1.1rem;
+  }
+
+  .welcome-actions,
+  .welcome-actions .button {
+    width: 100%;
+  }
+
+  .customer-row.featured {
+    align-items: start;
+    flex-wrap: wrap;
+  }
+
+  .customer-row.featured .text-link {
+    width: 100%;
+    padding-left: 3.15rem;
+  }
+
+  .attention-row {
+    align-items: start;
+    flex-wrap: wrap;
+  }
+
+  .attention-row .text-link {
+    width: 100%;
+    padding-left: 3.15rem;
+  }
+}

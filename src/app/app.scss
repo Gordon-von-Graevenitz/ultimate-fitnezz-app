@@ -1,0 +1,248 @@
+:host {
+  display: block;
+  min-height: 100dvh;
+}
+
+.app-shell {
+  min-height: 100dvh;
+}
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  min-height: 4.5rem;
+  padding: 0.75rem clamp(1rem, 4vw, 3.5rem);
+  border-bottom: 1px solid var(--line);
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
+  backdrop-filter: blur(14px);
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  color: var(--ink);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.brand-mark {
+  display: grid;
+  place-items: center;
+  width: 2.1rem;
+  height: 2.1rem;
+  border-radius: 50% 50% 50% 0.6rem;
+  color: #fff8f3;
+  background: var(--accent);
+  font-size: 0.9rem;
+}
+
+.primary-nav {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  margin-inline: auto;
+}
+
+.primary-nav a {
+  position: relative;
+  padding: 0.55rem 0;
+  color: var(--muted-ink);
+  text-decoration: none;
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.primary-nav a::after {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 2px;
+  border-radius: 99px;
+  background: var(--accent);
+  content: '';
+  opacity: 0;
+  transform: scaleX(0.4);
+  transition: 160ms ease;
+}
+
+.primary-nav a:hover,
+.primary-nav a.active {
+  color: var(--ink);
+}
+
+.primary-nav a.active::after {
+  opacity: 1;
+  transform: scaleX(1);
+}
+
+.new-session {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 2.55rem;
+  padding: 0.55rem 1rem;
+  border-radius: 999px;
+  color: #fff8f3;
+  background: var(--accent);
+  text-decoration: none;
+  font-size: 0.88rem;
+  font-weight: 700;
+  box-shadow: 0 8px 22px color-mix(in srgb, var(--accent) 24%, transparent);
+}
+
+.coach-avatar {
+  display: grid;
+  place-items: center;
+  width: 2.35rem;
+  height: 2.35rem;
+  border-radius: 50%;
+  color: var(--accent-strong);
+  background: var(--accent-soft);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.menu-button,
+.bottom-nav {
+  display: none;
+}
+
+.page-shell {
+  width: min(100% - 2rem, 1180px);
+  margin: 0 auto;
+  padding-block: clamp(1.5rem, 4vw, 3rem) 5rem;
+}
+
+@media (max-width: 760px) {
+  .topbar {
+    min-height: 4rem;
+    gap: 0.8rem;
+    padding-inline: 1rem;
+  }
+
+  .brand {
+    margin-right: auto;
+  }
+
+  .new-session,
+  .coach-avatar {
+    display: none;
+  }
+
+  .menu-button {
+    display: grid;
+    gap: 4px;
+    width: 2.5rem;
+    height: 2.5rem;
+    place-content: center;
+    border: 1px solid var(--line);
+    border-radius: 0.7rem;
+    background: var(--surface);
+  }
+
+  .menu-button span {
+    display: block;
+    width: 1rem;
+    height: 2px;
+    border-radius: 99px;
+    background: var(--ink);
+  }
+
+  .primary-nav {
+    position: absolute;
+    top: calc(100% + 0.4rem);
+    right: 1rem;
+    left: 1rem;
+    display: none;
+    align-items: stretch;
+    gap: 0.15rem;
+    padding: 0.6rem;
+    border: 1px solid var(--line);
+    border-radius: 1rem;
+    background: var(--surface);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .primary-nav.is-open {
+    display: grid;
+  }
+
+  .primary-nav a {
+    padding: 0.75rem 0.8rem;
+    border-radius: 0.7rem;
+  }
+
+  .primary-nav a.active {
+    background: var(--accent-soft);
+  }
+
+  .primary-nav a::after {
+    display: none;
+  }
+
+  .page-shell {
+    width: min(100% - 1.25rem, 1180px);
+    padding-top: 1.1rem;
+    padding-bottom: 6.5rem;
+  }
+
+  .bottom-nav {
+    position: fixed;
+    right: 0.6rem;
+    bottom: 0.6rem;
+    left: 0.6rem;
+    z-index: 30;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    align-items: end;
+    padding: 0.55rem 0.4rem max(0.4rem, env(safe-area-inset-bottom));
+    border: 1px solid var(--line);
+    border-radius: 1.25rem;
+    background: color-mix(in srgb, var(--surface) 95%, transparent);
+    backdrop-filter: blur(16px);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .bottom-nav a {
+    display: grid;
+    place-items: center;
+    gap: 0.2rem;
+    color: var(--muted-ink);
+    text-decoration: none;
+    font-size: 0.68rem;
+    font-weight: 700;
+  }
+
+  .bottom-nav a > span {
+    display: grid;
+    place-items: center;
+    min-height: 1.4rem;
+    font-size: 1.05rem;
+  }
+
+  .bottom-nav a.active {
+    color: var(--accent);
+  }
+
+  .bottom-nav .bottom-start {
+    color: var(--ink);
+  }
+
+  .bottom-nav .bottom-start > span {
+    width: 2.8rem;
+    height: 2.8rem;
+    margin-top: -1.5rem;
+    border: 4px solid var(--surface);
+    border-radius: 50%;
+    color: #fff8f3;
+    background: var(--accent);
+    font-size: 1.45rem;
+    box-shadow: 0 7px 18px color-mix(in srgb, var(--accent) 28%, transparent);
+  }
+}

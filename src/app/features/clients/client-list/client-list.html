@@ -1,0 +1,132 @@
+<main class="clients-page">
+  <header class="page-header">
+    <div>
+      <p class="eyebrow">Your community</p>
+      <h1>Clients</h1>
+      <p class="intro">Keep every person, plan and milestone close at hand.</p>
+    </div>
+    <button class="primary-button" type="button" (click)="openAddClient()">
+      <span aria-hidden="true">＋</span> Add client
+    </button>
+  </header>
+
+  <section class="summary" aria-label="Client summary">
+    <div><strong>{{ store.clients().length }}</strong><span>Total clients</span></div>
+    <div><strong>{{ activeCount() }}</strong><span>Training now</span></div>
+    <div><strong>{{ store.goals().length }}</strong><span>Goals in focus</span></div>
+  </section>
+
+  <section class="client-directory" aria-labelledby="directory-title">
+    <div class="directory-heading">
+      <div>
+        <h2 id="directory-title">Everyone</h2>
+        <p>{{ filteredClients().length }} people shown</p>
+      </div>
+      <div class="tools">
+        <label class="search-field">
+          <span class="visually-hidden">Search clients</span>
+          <span aria-hidden="true">⌕</span>
+          <input
+            type="search"
+            placeholder="Search by name or email"
+            [value]="searchQuery()"
+            (input)="setSearch($any($event.target).value)"
+          />
+        </label>
+        <label class="filter-field">
+          <span class="visually-hidden">Filter by status</span>
+          <select [value]="statusFilter()" (change)="setStatus($any($event.target).value)">
+            <option value="all">All clients</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+          </select>
+        </label>
+      </div>
+    </div>
+
+    @if (filteredClients().length) {
+      <div class="client-grid">
+        @for (client of filteredClients(); track client.id) {
+          <a class="client-card" [routerLink]="['/clients', client.id]">
+            <div class="card-top">
+              <span class="avatar" [style.background]="client.avatarColor">
+                {{ initials(client.firstName, client.lastName) }}
+              </span>
+              <span class="status" [class.inactive]="client.status === 'inactive'">
+                {{ client.status }}
+              </span>
+            </div>
+            <div class="client-name">
+              <h3>{{ client.firstName }} {{ client.lastName }}</h3>
+              <p>{{ client.email }}</p>
+            </div>
+            <div class="client-meta">
+              <div><span>Active goals</span><strong>{{ clientGoalCount(client.id) }}</strong></div>
+              <div><span>Last session</span><strong>{{ lastSessionLabel(client.id) }}</strong></div>
+            </div>
+            <span class="view-link">View profile <span aria-hidden="true">→</span></span>
+          </a>
+        }
+      </div>
+    } @else {
+      <div class="empty-state">
+        <span aria-hidden="true">○</span>
+        <h3>No clients found</h3>
+        <p>Try another search, or add your first client to begin tracking progress.</p>
+        <button class="secondary-button" type="button" (click)="openAddClient()">Add a client</button>
+      </div>
+    }
+  </section>
+</main>
+
+@if (isAddOpen()) {
+  <div class="modal-backdrop" (click)="closeAddClient()">
+    <section
+      class="modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="add-client-title"
+      (click)="$event.stopPropagation()"
+    >
+      <div class="modal-header">
+        <div>
+          <p class="eyebrow">New relationship</p>
+          <h2 id="add-client-title">Add a client</h2>
+        </div>
+        <button class="icon-button" type="button" aria-label="Close" (click)="closeAddClient()">×</button>
+      </div>
+
+      <form [formGroup]="clientForm" (ngSubmit)="addClient()">
+        <div class="form-grid">
+          <label>First name <span>*</span><input formControlName="firstName" autocomplete="given-name" /></label>
+          <label>Last name <span>*</span><input formControlName="lastName" autocomplete="family-name" /></label>
+          <label class="wide">Email <span>*</span><input formControlName="email" type="email" autocomplete="email" /></label>
+          <label>Phone<input formControlName="phone" type="tel" autocomplete="tel" /></label>
+          <label>Date of birth<input formControlName="dateOfBirth" type="date" /></label>
+          <label class="wide">Coaching notes<textarea formControlName="notes" rows="3" placeholder="Anything useful before the first session"></textarea></label>
+        </div>
+
+        <fieldset>
+          <legend>First goal <span>Optional</span></legend>
+          <div class="form-grid">
+            <label class="wide">Goal title<input formControlName="goalTitle" placeholder="e.g. Complete five pain-free pull-ups" /></label>
+            <label>Category
+              <select formControlName="goalCategory">
+                <option value="strength">Strength</option><option value="body-composition">Body composition</option>
+                <option value="endurance">Endurance</option><option value="mobility">Mobility</option>
+                <option value="habit">Habit</option><option value="other">Other</option>
+              </select>
+            </label>
+            <label>Target date<input formControlName="targetDate" type="date" /></label>
+          </div>
+        </fieldset>
+
+        @if (formError()) { <p class="form-error" role="alert">{{ formError() }}</p> }
+        <div class="modal-actions">
+          <button class="text-button" type="button" (click)="closeAddClient()">Cancel</button>
+          <button class="primary-button" type="submit">Save client</button>
+        </div>
+      </form>
+    </section>
+  </div>
+}

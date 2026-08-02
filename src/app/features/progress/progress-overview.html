@@ -1,0 +1,46 @@
+<header class="progress-header">
+  <div><p class="eyebrow">Progress insights</p><h1 class="page-title">See the change taking shape.</h1><p class="page-intro">Review consistency, measurements and personal bests for every customer.</p></div>
+  <label class="customer-picker"><span>Customer</span><select [ngModel]="selectedId()" (ngModelChange)="selectedId.set($event)">@for (customer of customers(); track customer.id) {<option [value]="customer.id">{{ customer.name }}</option>}</select></label>
+</header>
+
+<section class="customer-context panel">
+  <span class="large-avatar">{{ selected().name.slice(0, 1) }}{{ selected().name.split(' ')[1].slice(0, 1) }}</span>
+  <div><span class="context-label">Current focus</span><h2>{{ selected().goal }}</h2></div>
+  <a class="button" [routerLink]="['/clients', selected().id]">Open full profile</a>
+</section>
+
+<section class="insight-stats" aria-label="Selected customer progress summary">
+  <article class="panel"><span class="metric-label">Adherence</span><strong>{{ selected().adherence }}%</strong><span class="metric-detail positive">Strong consistency</span></article>
+  <article class="panel"><span class="metric-label">Completed sessions</span><strong>{{ selected().sessions }}</strong><span class="metric-detail">This training block</span></article>
+  <article class="panel"><span class="metric-label">Personal records</span><strong>{{ selected().personalRecords }}</strong><span class="metric-detail positive">Across all exercises</span></article>
+  <article class="panel"><span class="metric-label">Body-weight change</span><strong>{{ selected().weightChange }}</strong><span class="metric-detail">Since block started</span></article>
+</section>
+
+<div class="insight-layout">
+  <section class="panel chart-panel">
+    <header><div><p class="eyebrow">Body weight</p><h2>{{ selected().weight.at(-1)?.value ?? '—' }} @if (selected().weight.length) { kg }</h2></div><span class="muted">Recorded check-ins</span></header>
+    @if (selected().weight.length) {<div class="bar-chart" role="img" [attr.aria-label]="'Body-weight trend for ' + selected().name">
+      @for (point of selected().weight; track point.label + point.value) {
+        <div class="bar-column"><span class="bar-value">{{ point.value }}</span><span class="bar" [style.height.px]="barHeight(point.value)"></span><span class="bar-label">{{ point.label }}</span></div>
+      }
+    </div>} @else {<div class="chart-empty">Add two or more measurement check-ins to see a body-weight trend.</div>}
+    <p class="chart-note">Measurements are most useful as a trend. Daily fluctuations are normal.</p>
+  </section>
+
+  <section class="panel record-panel">
+    <header><div><p class="eyebrow">Recent wins</p><h2>Personal records</h2></div></header>
+    <div class="record-list">
+      @for (record of selected().records; track record.exercise) {
+        <div class="record-row"><span class="trophy" aria-hidden="true">★</span><div><strong>{{ record.exercise }}</strong><span>{{ record.date }}</span></div><strong>{{ record.result }}</strong></div>
+      } @empty {<p class="muted">Complete workout sets to surface personal records.</p>}
+    </div>
+  </section>
+
+  <section class="panel adherence-panel">
+    <header><div><p class="eyebrow">Consistency</p><h2>Training adherence</h2></div><strong>{{ selected().adherence }}%</strong></header>
+    <div class="adherence-track" [attr.aria-label]="selected().adherence + '% adherence'"><span [style.width.%]="selected().adherence"></span></div>
+    <div class="week-dots" aria-label="Recent session completion">
+      @for (week of [1, 2, 3, 4]; track week) {<div><span class="week-label">W{{ week }}</span>@for (day of [1, 2, 3, 4, 5]; track day) {<i [class.missed]="(week === 2 && day === 4) || (week === 4 && day === 2)"></i>}</div>}
+    </div>
+  </section>
+</div>
