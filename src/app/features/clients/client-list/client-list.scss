@@ -3,14 +3,14 @@
 .page-header, .directory-heading, .modal-header, .modal-actions { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
 .eyebrow { margin: 0 0 .5rem; color: var(--terracotta, #bb6346); font-size: .75rem; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
 h1 { margin: 0; font-family: Georgia, serif; font-size: clamp(2.6rem, 6vw, 4.6rem); font-weight: 500; line-height: .95; }
-.intro { margin: .9rem 0 0; color: #657169; font-size: 1.05rem; }
+.intro { margin: .9rem 0 0; color: var(--muted-ink); font-size: 1.05rem; }
 button, input, select, textarea { font: inherit; }
 button { cursor: pointer; }
 .primary-button, .secondary-button { min-height: 3rem; border-radius: 999px; padding: .7rem 1.25rem; font-weight: 750; }
-.primary-button { border: 1px solid #a95338; background: #bb6346; color: white; box-shadow: 0 7px 18px #8a42232c; }
-.primary-button:hover { background: #a95338; }
+.primary-button { border: 1px solid var(--accent-strong); background: var(--accent); color: white; box-shadow: 0 7px 18px color-mix(in srgb, var(--accent) 24%, transparent); }
+.primary-button:hover { background: var(--accent-strong); }
 .secondary-button { border: 1px solid #cfcac0; background: white; color: #34443a; }
-.summary { display: grid; grid-template-columns: repeat(3, 1fr); margin: 2.4rem 0; border: 1px solid #e2ded4; border-radius: 1.25rem; background: #fffdf8; box-shadow: 0 12px 35px #3d4a3f0b; }
+.summary { display: grid; grid-template-columns: repeat(3, 1fr); margin: 2.4rem 0; border: 1px solid var(--line); border-radius: 1.25rem; background: var(--surface); box-shadow: var(--shadow-sm); }
 .summary div { padding: 1.35rem 1.6rem; }
 .summary div + div { border-left: 1px solid #e8e3da; }
 .summary strong { display: block; font-family: Georgia, serif; font-size: 1.8rem; font-weight: 500; }
@@ -20,12 +20,12 @@ button { cursor: pointer; }
 .directory-heading p { margin: .25rem 0 0; color: #7c867f; font-size: .85rem; }
 .tools { display: flex; gap: .65rem; }
 .search-field, .filter-field { display: flex; align-items: center; gap: .4rem; min-height: 2.75rem; padding: 0 .85rem; border: 1px solid #d9d6ce; border-radius: .75rem; background: white; }
-.search-field:focus-within, .filter-field:focus-within { border-color: #718b76; box-shadow: 0 0 0 3px #718b7625; }
+.search-field:focus-within, .filter-field:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent); }
 .search-field input, .filter-field select { border: 0; outline: 0; background: transparent; color: inherit; }
 .search-field input { width: min(15rem, 34vw); }
 .client-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; margin-top: 1.25rem; }
-.client-card { display: flex; min-height: 17rem; flex-direction: column; padding: 1.25rem; border: 1px solid #e2ded4; border-radius: 1.2rem; background: #fffdf9; color: inherit; text-decoration: none; transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
-.client-card:hover, .client-card:focus-visible { transform: translateY(-3px); border-color: #cdbbad; box-shadow: 0 15px 32px #42372d13; outline: none; }
+.client-card { display: flex; min-height: 17rem; flex-direction: column; padding: 1.25rem; border: 1px solid var(--line); border-radius: 1.2rem; background: var(--surface); color: inherit; text-decoration: none; transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
+.client-card:hover, .client-card:focus-visible { transform: translateY(-3px); border-color: color-mix(in srgb, var(--accent) 36%, var(--line)); box-shadow: var(--shadow-lg); outline: none; }
 .card-top { display: flex; align-items: flex-start; justify-content: space-between; }
 .avatar { display: grid; width: 3.1rem; height: 3.1rem; place-items: center; border-radius: 50%; color: white; font-weight: 800; letter-spacing: .04em; }
 .status { padding: .28rem .58rem; border-radius: 999px; background: #e7f0e6; color: #496e50; font-size: .72rem; font-weight: 800; text-transform: capitalize; }
@@ -37,9 +37,9 @@ button { cursor: pointer; }
 .client-meta span, .client-meta strong { display: block; }
 .client-meta span { color: #8a918d; font-size: .7rem; }
 .client-meta strong { margin-top: .25rem; font-size: .82rem; }
-.view-link { margin-top: auto; color: #a95338; font-size: .82rem; font-weight: 800; }
+.view-link { margin-top: auto; color: var(--accent-strong); font-size: .82rem; font-weight: 800; }
 .empty-state { margin-top: 1.25rem; padding: 4.5rem 1rem; border: 1px dashed #cbc6bc; border-radius: 1.2rem; text-align: center; }
-.empty-state > span { font-family: Georgia, serif; font-size: 3rem; color: #bb6346; }
+.empty-state > span { font-family: Georgia, serif; font-size: 3rem; color: var(--accent); }
 .empty-state h3 { margin: .8rem 0 .3rem; font-family: Georgia, serif; font-size: 1.4rem; }
 .empty-state p { max-width: 26rem; margin: 0 auto 1.2rem; color: #747d77; }
 .modal-backdrop { position: fixed; z-index: 100; inset: 0; display: grid; place-items: center; overflow: auto; padding: 1rem; background: #1f2924a8; backdrop-filter: blur(3px); }
@@ -48,10 +48,10 @@ button { cursor: pointer; }
 .icon-button { width: 2.6rem; height: 2.6rem; border: 1px solid #ded9d0; border-radius: 50%; background: white; color: #4f5852; font-size: 1.5rem; }
 .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1.5rem; }
 .form-grid label { display: grid; gap: .4rem; color: #4d5951; font-size: .78rem; font-weight: 750; }
-.form-grid label > span { color: #bb6346; }
+.form-grid label > span { color: var(--accent); }
 .form-grid .wide { grid-column: 1 / -1; }
 .form-grid input, .form-grid select, .form-grid textarea { width: 100%; box-sizing: border-box; border: 1px solid #d8d3c9; border-radius: .65rem; background: white; padding: .72rem .8rem; color: #26342d; outline: 0; }
-.form-grid input:focus, .form-grid select:focus, .form-grid textarea:focus { border-color: #718b76; box-shadow: 0 0 0 3px #718b7625; }
+.form-grid input:focus, .form-grid select:focus, .form-grid textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent); }
 fieldset { margin: 1.7rem 0 0; padding: 0; border: 0; border-top: 1px solid #e5dfd5; }
 legend { padding: 1.4rem 0 0; font-family: Georgia, serif; font-size: 1.1rem; }
 legend span { margin-left: .4rem; color: #8b918d; font-family: sans-serif; font-size: .7rem; }

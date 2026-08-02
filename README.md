@@ -1,4 +1,4 @@
-# Kinship Personal Training Workspace
+# BarBelle's Fitness Studio
 
 A trainer-only Angular application for managing personal-training customers, reusable workout plans, recorded sessions, goals, measurements, progress photos, and performance insights.
 

@@ -1,23 +1,27 @@
 :root {
   color-scheme: light;
-  --page: #fbf8f3;
-  --surface: #fffdf9;
+  --page: #fff9fb;
+  --surface: #fffdfd;
   --surface-raised: #ffffff;
-  --ink: #2e2b27;
-  --muted-ink: #776f65;
-  --faint-ink: #9a9187;
-  --line: #e7dfd4;
-  --accent: #d85f3e;
-  --accent-strong: #a83e25;
-  --accent-soft: #f5e5d8;
+  --ink: #3f3a3b;
+  --muted-ink: #756e70;
+  --faint-ink: #9b9295;
+  --line: #eadfe3;
+  --accent: #a94f7d;
+  --accent-strong: #7c3158;
+  --accent-soft: #f7e1ee;
+  --brand-pink: #e8a7d2;
+  --brand-gold: #d2ad52;
+  --brand-gold-soft: #f7edcd;
+  --terracotta: var(--accent);
   --positive: #3f7f5a;
   --positive-soft: #e4f0e7;
-  --warning: #a66a1e;
-  --warning-soft: #f7ead5;
-  --info: #456aa3;
-  --info-soft: #e7edf7;
-  --shadow-sm: 0 8px 24px rgba(67, 49, 32, 0.06);
-  --shadow-lg: 0 20px 55px rgba(67, 49, 32, 0.13);
+  --warning: #8a681d;
+  --warning-soft: var(--brand-gold-soft);
+  --info: #76566d;
+  --info-soft: #f0e7ed;
+  --shadow-sm: 0 8px 24px rgba(93, 57, 77, 0.07);
+  --shadow-lg: 0 20px 55px rgba(93, 57, 77, 0.14);
   font-family: Inter, Avenir, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   font-synthesis: none;
 }
@@ -37,7 +41,8 @@ body {
   margin: 0;
   color: var(--ink);
   background:
-    radial-gradient(circle at 8% 5%, rgba(216, 95, 62, 0.06), transparent 25rem),
+    radial-gradient(circle at 8% 5%, rgba(232, 167, 210, 0.16), transparent 25rem),
+    radial-gradient(circle at 94% 12%, rgba(210, 173, 82, 0.1), transparent 20rem),
     var(--page);
   font-size: 16px;
   line-height: 1.5;
@@ -136,7 +141,7 @@ h3 {
 
 .button.primary {
   border-color: var(--accent);
-  color: #fff8f3;
+  color: #fff;
   background: var(--accent);
 }
 

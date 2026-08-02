@@ -17,7 +17,7 @@
 .chart-panel h2, .record-panel h2, .adherence-panel h2 { margin: 0; font-family: Georgia, 'Times New Roman', serif; font-size: 1.45rem; font-weight: 500; }
 .bar-chart { display: grid; grid-template-columns: repeat(6, 1fr); gap: .7rem; align-items: end; min-height: 13rem; padding: 1.5rem .4rem .7rem; border-bottom: 1px solid var(--line); background: repeating-linear-gradient(to bottom, transparent 0, transparent 3.25rem, var(--line) calc(3.25rem + 1px)); }
 .bar-column { display: grid; justify-items: center; align-items: end; gap: .4rem; height: 11.5rem; }
-.bar { width: min(2.2rem, 70%); align-self: end; border-radius: .65rem .65rem .2rem .2rem; background: linear-gradient(to top, var(--accent), #ed987c); }
+.bar { width: min(2.2rem, 70%); align-self: end; border-radius: .65rem .65rem .2rem .2rem; background: linear-gradient(to top, var(--accent), var(--brand-pink)); }
 .bar-value { margin-top: auto; color: var(--muted-ink); font-size: .68rem; }
 .bar-label { color: var(--muted-ink); font-size: .7rem; }
 .chart-note { margin: 1rem 0 0; color: var(--muted-ink); font-size: .76rem; }
