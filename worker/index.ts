@@ -113,14 +113,24 @@ export default {
     }
 
     const requestId = crypto.randomUUID();
+    if (url.pathname === '/api/auth/session') {
+      if (request.method !== 'GET') {
+        return json({ error: 'Method not allowed.', requestId }, 405, { Allow: 'GET' });
+      }
+      return json({
+        authenticated: true,
+        email: request.headers.get('Cf-Access-Authenticated-User-Email'),
+      });
+    }
+
     if (!allowRequest(request)) {
-      return json({ error: 'Too many AI requests. Please wait a few minutes and try again.', requestId }, 429);
+      return json(
+        { error: 'Too many AI requests. Please wait a few minutes and try again.', requestId },
+        429,
+      );
     }
 
     try {
-      if (url.pathname === '/api/auth/session' && request.method === 'GET') {
-        return json({ email: request.headers.get('Cf-Access-Authenticated-User-Email') });
-      }
       if (url.pathname === '/api/ai/transcribe' && request.method === 'POST') {
         return await transcribe(request, env);
       }
@@ -201,7 +211,7 @@ async function recommend(request: Request, env: Env): Promise<Response> {
 
 function systemPrompt(): string {
   return [
-    'You are a planning assistant for a qualified personal trainer at BarBelle\'s Fitness Studio.',
+    "You are a planning assistant for a qualified personal trainer at BarBelle's Fitness Studio.",
     'Create one practical workout draft from the user request. The trainer will review it before use.',
     'Use the optional anonymous customer goals and recent workout summaries when supplied.',
     'Prefer an exercise from exerciseCatalog when it is a good match. Copy its exact id into libraryExerciseId.',
@@ -231,7 +241,9 @@ function validateRecommendationRequest(value: unknown): {
   if (prompt.length < 5) {
     throw new RequestError('Describe the workout you would like to create.', 400);
   }
-  const rawCatalog = Array.isArray(value['exerciseCatalog']) ? value['exerciseCatalog'].slice(0, 150) : [];
+  const rawCatalog = Array.isArray(value['exerciseCatalog'])
+    ? value['exerciseCatalog'].slice(0, 150)
+    : [];
   const exerciseCatalog = rawCatalog.flatMap((item) => {
     if (!isRecord(item)) return [];
     const id = cleanString(item['id'], 120);
@@ -239,16 +251,20 @@ function validateRecommendationRequest(value: unknown): {
     if (!id || !name) return [];
     const category = enumValue(item['category'], exerciseCategories, 'strength');
     const metrics = Array.isArray(item['metrics'])
-      ? item['metrics'].filter((metric): metric is string => exerciseMetrics.includes(metric as never)).slice(0, 6)
+      ? item['metrics']
+          .filter((metric): metric is string => exerciseMetrics.includes(metric as never))
+          .slice(0, 6)
       : [];
-    return [{
-      id,
-      name,
-      category,
-      primaryMuscleGroup: cleanString(item['primaryMuscleGroup'], 100) || 'Full body',
-      equipment: cleanString(item['equipment'], 100) || 'Bodyweight',
-      metrics,
-    }];
+    return [
+      {
+        id,
+        name,
+        category,
+        primaryMuscleGroup: cleanString(item['primaryMuscleGroup'], 100) || 'Full body',
+        equipment: cleanString(item['equipment'], 100) || 'Bodyweight',
+        metrics,
+      },
+    ];
   });
 
   const clientContext = sanitizeClientContext(value['clientContext']);
@@ -257,25 +273,29 @@ function validateRecommendationRequest(value: unknown): {
 
 function sanitizeClientContext(value: unknown): JsonRecord | undefined {
   if (!isRecord(value)) return undefined;
-  const goals = (Array.isArray(value['goals']) ? value['goals'] : []).slice(0, 10).flatMap((goal) => {
-    if (!isRecord(goal)) return [];
-    const title = cleanString(goal['title'], 120);
-    return title ? [{ title, category: cleanString(goal['category'], 40) }] : [];
-  });
+  const goals = (Array.isArray(value['goals']) ? value['goals'] : [])
+    .slice(0, 10)
+    .flatMap((goal) => {
+      if (!isRecord(goal)) return [];
+      const title = cleanString(goal['title'], 120);
+      return title ? [{ title, category: cleanString(goal['category'], 40) }] : [];
+    });
   const recentWorkouts = (Array.isArray(value['recentWorkouts']) ? value['recentWorkouts'] : [])
     .slice(0, 5)
     .flatMap((workout) => {
       if (!isRecord(workout)) return [];
       const name = cleanString(workout['name'], 120);
       if (!name) return [];
-      return [{
-        name,
-        completedAt: cleanString(workout['completedAt'], 40),
-        exercises: (Array.isArray(workout['exercises']) ? workout['exercises'] : [])
-          .map((exercise) => cleanString(exercise, 100))
-          .filter(Boolean)
-          .slice(0, 20),
-      }];
+      return [
+        {
+          name,
+          completedAt: cleanString(workout['completedAt'], 40),
+          exercises: (Array.isArray(workout['exercises']) ? workout['exercises'] : [])
+            .map((exercise) => cleanString(exercise, 100))
+            .filter(Boolean)
+            .slice(0, 20),
+        },
+      ];
     });
   return { goals, recentWorkouts };
 }
@@ -288,7 +308,10 @@ function extractModelDraft(result: unknown): JsonRecord {
     const parsed = JSON.parse(candidate) as unknown;
     if (isRecord(parsed)) return parsed;
   }
-  throw new RequestError('The AI returned a draft that could not be reviewed safely. Please try again.', 502);
+  throw new RequestError(
+    'The AI returned a draft that could not be reviewed safely. Please try again.',
+    502,
+  );
 }
 
 function normalizeDraft(model: JsonRecord, catalog: Map<string, JsonRecord>): JsonRecord {
@@ -302,21 +325,28 @@ function normalizeDraft(model: JsonRecord, catalog: Map<string, JsonRecord>): Js
     const metrics = known
       ? stringArray(known['metrics'], exerciseMetrics, 6)
       : stringArray(raw['metrics'], exerciseMetrics, 6);
-    return [{
-      ...(known ? { libraryExerciseId: requestedId } : {}),
-      name: cleanString(known?.['name'] ?? raw['name'], 100) || 'New exercise',
-      category: enumValue(known?.['category'] ?? raw['category'], exerciseCategories, 'strength'),
-      primaryMuscleGroup: cleanString(known?.['primaryMuscleGroup'] ?? raw['primaryMuscleGroup'], 100) || 'Full body',
-      equipment: cleanString(known?.['equipment'] ?? raw['equipment'], 100) || 'Bodyweight',
-      metrics: metrics.length ? metrics : inferMetrics(sets),
-      instructions: cleanString(raw['instructions'], 500) || undefined,
-      restSeconds: numeric(raw['restSeconds'], 0, 600, 90),
-      sets,
-      notes: cleanString(raw['notes'], 300) || undefined,
-    }];
+    return [
+      {
+        ...(known ? { libraryExerciseId: requestedId } : {}),
+        name: cleanString(known?.['name'] ?? raw['name'], 100) || 'New exercise',
+        category: enumValue(known?.['category'] ?? raw['category'], exerciseCategories, 'strength'),
+        primaryMuscleGroup:
+          cleanString(known?.['primaryMuscleGroup'] ?? raw['primaryMuscleGroup'], 100) ||
+          'Full body',
+        equipment: cleanString(known?.['equipment'] ?? raw['equipment'], 100) || 'Bodyweight',
+        metrics: metrics.length ? metrics : inferMetrics(sets),
+        instructions: cleanString(raw['instructions'], 500) || undefined,
+        restSeconds: numeric(raw['restSeconds'], 0, 600, 90),
+        sets,
+        notes: cleanString(raw['notes'], 300) || undefined,
+      },
+    ];
   });
   if (exercises.length === 0) {
-    throw new RequestError('The AI did not return a usable exercise. Add more detail and try again.', 502);
+    throw new RequestError(
+      'The AI did not return a usable exercise. Add more detail and try again.',
+      502,
+    );
   }
   return {
     planName: cleanString(model['planName'], 60) || 'AI workout draft',
@@ -326,7 +356,10 @@ function normalizeDraft(model: JsonRecord, catalog: Map<string, JsonRecord>): Js
     difficulty: enumValue(model['difficulty'], difficulties, 'intermediate'),
     exercises,
     warnings: Array.isArray(model['warnings'])
-      ? model['warnings'].map((warning) => cleanString(warning, 240)).filter(Boolean).slice(0, 6)
+      ? model['warnings']
+          .map((warning) => cleanString(warning, 240))
+          .filter(Boolean)
+          .slice(0, 6)
       : [],
   };
 }
@@ -337,7 +370,13 @@ function normalizeSets(value: unknown): JsonRecord[] {
     const normalized: JsonRecord = {};
     copyOptionalNumber(normalized, 'targetWeightKg', set['targetWeightKg'], 0, 1_000);
     copyOptionalNumber(normalized, 'targetReps', set['targetReps'], 0, 1_000);
-    copyOptionalNumber(normalized, 'targetDurationSeconds', set['targetDurationSeconds'], 0, 14_400);
+    copyOptionalNumber(
+      normalized,
+      'targetDurationSeconds',
+      set['targetDurationSeconds'],
+      0,
+      14_400,
+    );
     copyOptionalNumber(normalized, 'targetDistanceMeters', set['targetDistanceMeters'], 0, 100_000);
     copyOptionalNumber(normalized, 'targetRpe', set['targetRpe'], 1, 10);
     const notes = cleanString(set['notes'], 200);
@@ -354,13 +393,16 @@ function inferMetrics(sets: JsonRecord[]): string[] {
     ['targetDistanceMeters', 'distance'],
     ['targetRpe', 'rpe'],
   ];
-  return fields.filter(([field]) => sets.some((set) => set[field] !== undefined)).map(([, metric]) => metric);
+  return fields
+    .filter(([field]) => sets.some((set) => set[field] !== undefined))
+    .map(([, metric]) => metric);
 }
 
 function allowRequest(request: Request): boolean {
-  const key = request.headers.get('Cf-Access-Authenticated-User-Email')
-    || request.headers.get('CF-Connecting-IP')
-    || 'anonymous';
+  const key =
+    request.headers.get('Cf-Access-Authenticated-User-Email') ||
+    request.headers.get('CF-Connecting-IP') ||
+    'anonymous';
   const now = Date.now();
   const current = rateWindows.get(key);
   if (!current || current.resetAt <= now) {
@@ -403,12 +445,14 @@ function cleanString(value: unknown, maximum: number): string {
 
 function stringArray(value: unknown, allowed: readonly string[], maximum: number): string[] {
   return Array.isArray(value)
-    ? value.filter((item): item is string => typeof item === 'string' && allowed.includes(item)).slice(0, maximum)
+    ? value
+        .filter((item): item is string => typeof item === 'string' && allowed.includes(item))
+        .slice(0, maximum)
     : [];
 }
 
 function enumValue<T extends string>(value: unknown, allowed: readonly T[], fallback: T): T {
-  return typeof value === 'string' && allowed.includes(value as T) ? value as T : fallback;
+  return typeof value === 'string' && allowed.includes(value as T) ? (value as T) : fallback;
 }
 
 function isRecord(value: unknown): value is JsonRecord {
@@ -418,10 +462,16 @@ function isRecord(value: unknown): value is JsonRecord {
 function cloudflareAiError(error: unknown): RequestError | undefined {
   const detail = errorDescription(error).toLowerCase();
   if (detail.includes('3007') || detail.includes('timeout') || detail.includes('timed out')) {
-    return new RequestError('Workout generation timed out. Please try again; a shorter request may complete faster.', 504);
+    return new RequestError(
+      'Workout generation timed out. Please try again; a shorter request may complete faster.',
+      504,
+    );
   }
   if (detail.includes('3036') || detail.includes('daily free allocation')) {
-    return new RequestError('The daily free AI allowance has been used. Please try again tomorrow.', 429);
+    return new RequestError(
+      'The daily free AI allowance has been used. Please try again tomorrow.',
+      429,
+    );
   }
   if (detail.includes('3040') || detail.includes('out of capacity')) {
     return new RequestError('Cloudflare AI is currently busy. Please try again in a moment.', 503);
@@ -439,19 +489,24 @@ function errorDescription(error: unknown): string {
   }
 }
 
-function json(value: unknown, status = 200): Response {
+function json(value: unknown, status = 200, additionalHeaders?: HeadersInit): Response {
   return Response.json(value, {
     status,
     headers: {
-      'Cache-Control': 'no-store',
+      'Cache-Control': 'no-store, no-cache, must-revalidate',
       'Content-Security-Policy': "default-src 'none'",
+      Pragma: 'no-cache',
       'X-Content-Type-Options': 'nosniff',
+      ...additionalHeaders,
     },
   });
 }
 
 class RequestError extends Error {
-  constructor(message: string, readonly status: number) {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
     super(message);
   }
 }

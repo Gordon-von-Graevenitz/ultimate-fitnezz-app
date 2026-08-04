@@ -11,10 +11,11 @@ A trainer-only Angular application for managing personal-training customers, reu
 - Set tracking for weight, reps, duration, distance, RPE, notes, and completion
 - Progress insights generated from the locally recorded data
 - Responsive desktop, tablet, and mobile layouts
-- Installable PWA with offline application-shell caching
+- Installable PWA with an authenticated, network-first application shell
+- Cloudflare Access session checks before customer data is rendered
 - Device-local persistence through a signal-based data store
 
-No account or cloud service is required. Records remain in the current browser's local storage. Clearing browser data removes the records, so this version should be treated as a local MVP rather than a production backup system.
+Records remain in the current browser's local storage. Cloudflare Access protects the hosted app, but it does not sync or back up workout data. Clearing browser data removes the records, so this version should still be treated as a local MVP rather than a production backup system.
 
 ## Run locally
 
@@ -24,6 +25,8 @@ pnpm start
 ```
 
 Open the local address printed by Angular.
+
+Authentication is skipped by Angular's development build. The production build expects the Worker hostname to be protected by Cloudflare Access.
 
 ## Verify
 
@@ -50,3 +53,17 @@ src/app/
 ```
 
 `LocalDataStore` is the persistence boundary. A future cloud repository can replace or wrap it without moving persistence concerns into page components.
+
+## Existing phone installations
+
+After deploying this authentication update, open this address once on each already-installed PWA:
+
+```text
+https://ultimate-fitnezz-app.hushed-candy.workers.dev/?ngsw-bypass=secure-auth-v1
+```
+
+The bypass forces the old cached PWA to contact Cloudflare, show Access sign-in when needed, and download the authenticated version. The query parameter is removed after a successful session check. Existing `localStorage` customer and workout data is not cleared.
+
+The installed PWA and its `localStorage` are tied to this exact hostname. Because `wrangler.jsonc` currently names the new Worker `barbelles-fitness`, deploying only to that new Worker will not update the existing phone installation or move its local data. Keep deploying this build to the existing `ultimate-fitnezz-app` Worker until data export or cloud sync is available.
+
+Production startup now requires a live Access session, so the trainer must be online when opening the app. Angular also checks for a newer PWA version and reloads when one is ready.

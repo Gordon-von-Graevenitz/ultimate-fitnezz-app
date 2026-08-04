@@ -1,48 +1,84 @@
-<div class="app-shell">
-  <header class="topbar">
-    <a class="brand" routerLink="/" aria-label="BarBelle's Fitness Studio dashboard" (click)="closeMenu()">
-      <span class="brand-mark" aria-hidden="true">
-        <img src="barbelles-logo.jpeg" alt="" />
-      </span>
-      <span class="brand-name">
-        <strong>BarBelle's</strong>
-        <small>Fitness Studio</small>
-      </span>
-    </a>
+@if (auth.status() === 'authenticated') {
+  <div class="app-shell">
+    <header class="topbar">
+      <a
+        class="brand"
+        routerLink="/"
+        aria-label="BarBelle's Fitness Studio dashboard"
+        (click)="closeMenu()"
+      >
+        <span class="brand-mark" aria-hidden="true">
+          <img src="barbelles-logo.jpeg" alt="" />
+        </span>
+        <span class="brand-name">
+          <strong>BarBelle's</strong>
+          <small>Fitness Studio</small>
+        </span>
+      </a>
 
-    <button
-      class="menu-button"
-      type="button"
-      aria-label="Toggle navigation"
-      [attr.aria-expanded]="menuOpen()"
-      (click)="menuOpen.set(!menuOpen())"
-    >
-      <span></span><span></span><span></span>
-    </button>
+      <button
+        class="menu-button"
+        type="button"
+        aria-label="Toggle navigation"
+        [attr.aria-expanded]="menuOpen()"
+        (click)="menuOpen.set(!menuOpen())"
+      >
+        <span></span><span></span><span></span>
+      </button>
 
-    <nav class="primary-nav" aria-label="Primary navigation" [class.is-open]="menuOpen()">
-      <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" (click)="closeMenu()">Home</a>
-      <a routerLink="/clients" routerLinkActive="active" (click)="closeMenu()">People</a>
-      <a routerLink="/workouts" routerLinkActive="active" (click)="closeMenu()">Plans</a>
-      <a routerLink="/progress" routerLinkActive="active" (click)="closeMenu()">Insights</a>
+      <nav class="primary-nav" aria-label="Primary navigation" [class.is-open]="menuOpen()">
+        <a
+          routerLink="/"
+          routerLinkActive="active"
+          [routerLinkActiveOptions]="{ exact: true }"
+          (click)="closeMenu()"
+          >Home</a
+        >
+        <a routerLink="/clients" routerLinkActive="active" (click)="closeMenu()">People</a>
+        <a routerLink="/workouts" routerLinkActive="active" (click)="closeMenu()">Plans</a>
+        <a routerLink="/progress" routerLinkActive="active" (click)="closeMenu()">Insights</a>
+      </nav>
+
+      <a class="new-session" routerLink="/session/new" (click)="closeMenu()">
+        <span aria-hidden="true">＋</span>
+        <span>Start session</span>
+      </a>
+      <a
+        class="coach-avatar"
+        href="/cdn-cgi/access/logout"
+        aria-label="Sign out Hermien, trainer"
+        title="Sign out"
+        >H</a
+      >
+    </header>
+
+    <main class="page-shell">
+      <router-outlet />
+    </main>
+
+    <nav class="bottom-nav" aria-label="Mobile navigation">
+      <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }"
+        ><span aria-hidden="true">⌂</span>Home</a
+      >
+      <a routerLink="/clients" routerLinkActive="active"><span aria-hidden="true">◉</span>People</a>
+      <a class="bottom-start" routerLink="/session/new"><span aria-hidden="true">＋</span>Log</a>
+      <a routerLink="/workouts" routerLinkActive="active"><span aria-hidden="true">▤</span>Plans</a>
+      <a routerLink="/progress" routerLinkActive="active"
+        ><span aria-hidden="true">↗</span>Insights</a
+      >
     </nav>
-
-    <a class="new-session" routerLink="/session/new" (click)="closeMenu()">
-      <span aria-hidden="true">＋</span>
-      <span>Start session</span>
-    </a>
-    <a class="coach-avatar" href="/cdn-cgi/access/logout" aria-label="Sign out Hermien, trainer" title="Sign out">H</a>
-  </header>
-
-  <main class="page-shell">
-    <router-outlet />
+  </div>
+} @else {
+  <main class="auth-gate" aria-live="polite">
+    <section class="auth-card">
+      <img src="barbelles-logo.jpeg" alt="BarBelle's Fitness Studio" />
+      <p class="eyebrow">Private trainer workspace</p>
+      <h1>Sign in to continue</h1>
+      <p>
+        This app checks your BarBelle's access before showing any customer or workout information.
+        Make sure you are online, then continue to the secure sign-in page.
+      </p>
+      <button class="button primary" type="button" (click)="signIn()">Sign in securely</button>
+    </section>
   </main>
-
-  <nav class="bottom-nav" aria-label="Mobile navigation">
-    <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }"><span aria-hidden="true">⌂</span>Home</a>
-    <a routerLink="/clients" routerLinkActive="active"><span aria-hidden="true">◉</span>People</a>
-    <a class="bottom-start" routerLink="/session/new"><span aria-hidden="true">＋</span>Log</a>
-    <a routerLink="/workouts" routerLinkActive="active"><span aria-hidden="true">▤</span>Plans</a>
-    <a routerLink="/progress" routerLinkActive="active"><span aria-hidden="true">↗</span>Insights</a>
-  </nav>
-</div>
+}
