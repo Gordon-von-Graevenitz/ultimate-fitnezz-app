@@ -9,6 +9,41 @@ function environment(aiResponse: unknown) {
 }
 
 describe('AI workout Worker', () => {
+  it('returns an uncached Access session without consuming the AI rate limit', async () => {
+    const env = environment({});
+
+    for (let attempt = 0; attempt < 25; attempt += 1) {
+      const response = await worker.fetch(
+        new Request('https://example.com/api/auth/session', {
+          headers: {
+            'CF-Connecting-IP': '198.51.100.20',
+            'Cf-Access-Authenticated-User-Email': 'trainer@example.com',
+          },
+        }),
+        env,
+      );
+      expect(response.status).toBe(200);
+      expect(response.headers.get('Cache-Control')).toContain('no-store');
+      expect(await response.json()).toEqual({
+        authenticated: true,
+        email: 'trainer@example.com',
+      });
+    }
+
+    expect(env.AI.run).not.toHaveBeenCalled();
+  });
+
+  it('rejects non-GET session checks', async () => {
+    const env = environment({});
+    const response = await worker.fetch(
+      new Request('https://example.com/api/auth/session', { method: 'POST' }),
+      env,
+    );
+
+    expect(response.status).toBe(405);
+    expect(response.headers.get('Allow')).toBe('GET');
+  });
+
   it('normalizes known exercise IDs and turns unknown IDs into reviewable new exercises', async () => {
     const env = environment({
       response: {
@@ -29,7 +64,16 @@ describe('AI workout Worker', () => {
             instructions: '',
             restSeconds: 90,
             notes: 'Control the lowering phase.',
-            sets: [{ targetWeightKg: 10, targetReps: 10, targetDurationSeconds: null, targetDistanceMeters: null, targetRpe: 7, notes: '' }],
+            sets: [
+              {
+                targetWeightKg: 10,
+                targetReps: 10,
+                targetDurationSeconds: null,
+                targetDistanceMeters: null,
+                targetRpe: 7,
+                notes: '',
+              },
+            ],
           },
           {
             libraryExerciseId: 'invented-id',
@@ -41,7 +85,16 @@ describe('AI workout Worker', () => {
             instructions: 'Use the wall for balance.',
             restSeconds: 60,
             notes: '',
-            sets: [{ targetWeightKg: null, targetReps: 12, targetDurationSeconds: null, targetDistanceMeters: null, targetRpe: 7, notes: '' }],
+            sets: [
+              {
+                targetWeightKg: null,
+                targetReps: 12,
+                targetDurationSeconds: null,
+                targetDistanceMeters: null,
+                targetRpe: 7,
+                notes: '',
+              },
+            ],
           },
         ],
       },
@@ -51,19 +104,21 @@ describe('AI workout Worker', () => {
       headers: { 'content-type': 'application/json', 'CF-Connecting-IP': '198.51.100.10' },
       body: JSON.stringify({
         prompt: 'Create a simple full-body strength workout.',
-        exerciseCatalog: [{
-          id: 'squat-1',
-          name: 'Goblet squat',
-          category: 'strength',
-          primaryMuscleGroup: 'Legs',
-          equipment: 'Dumbbell',
-          metrics: ['weight', 'reps', 'rpe'],
-        }],
+        exerciseCatalog: [
+          {
+            id: 'squat-1',
+            name: 'Goblet squat',
+            category: 'strength',
+            primaryMuscleGroup: 'Legs',
+            equipment: 'Dumbbell',
+            metrics: ['weight', 'reps', 'rpe'],
+          },
+        ],
       }),
     });
 
     const response = await worker.fetch(request, env);
-    const body = await response.json() as { exercises: Array<Record<string, unknown>> };
+    const body = (await response.json()) as { exercises: Array<Record<string, unknown>> };
 
     expect(response.status).toBe(200);
     expect(body.exercises[0]).toMatchObject({
@@ -93,7 +148,7 @@ describe('AI workout Worker', () => {
       }),
       env,
     );
-    const body = await response.json() as { error: string; requestId: string };
+    const body = (await response.json()) as { error: string; requestId: string };
 
     expect(response.status).toBe(504);
     expect(body.error).toContain('timed out');

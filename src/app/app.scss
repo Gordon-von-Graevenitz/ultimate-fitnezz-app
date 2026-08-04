@@ -3,6 +3,44 @@
   min-height: 100dvh;
 }
 
+.auth-gate {
+  display: grid;
+  min-height: 100dvh;
+  padding: 1.25rem;
+  place-items: center;
+}
+
+.auth-card {
+  width: min(100%, 29rem);
+  padding: clamp(1.5rem, 6vw, 2.5rem);
+  border: 1px solid var(--line);
+  border-radius: 1.5rem;
+  background: color-mix(in srgb, var(--surface) 96%, transparent);
+  box-shadow: var(--shadow-lg);
+  text-align: center;
+}
+
+.auth-card img {
+  width: 7rem;
+  height: 7rem;
+  margin-bottom: 1.25rem;
+  border: 1px solid color-mix(in srgb, var(--brand-gold) 45%, var(--line));
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.auth-card h1 {
+  margin-bottom: 0.65rem;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: clamp(2rem, 7vw, 2.7rem);
+  font-weight: 500;
+}
+
+.auth-card p:not(.eyebrow) {
+  margin-bottom: 1.5rem;
+  color: var(--muted-ink);
+}
+
 .app-shell {
   min-height: 100dvh;
 }

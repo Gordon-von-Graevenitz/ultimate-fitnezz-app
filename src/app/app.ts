@@ -1,5 +1,6 @@
-import { Component, signal } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { AuthSessionService } from './core/auth/auth-session.service';
 
 @Component({
   selector: 'app-root',
@@ -8,9 +9,14 @@ import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
   styleUrl: './app.scss',
 })
 export class App {
+  protected readonly auth = inject(AuthSessionService);
   protected readonly menuOpen = signal(false);
 
   protected closeMenu(): void {
     this.menuOpen.set(false);
+  }
+
+  protected signIn(): void {
+    this.auth.redirectToSignIn(true);
   }
 }
