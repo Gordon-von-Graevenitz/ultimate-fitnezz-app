@@ -22,6 +22,14 @@ export const routes: Routes = [
     loadComponent: () => import('./features/workouts/workout-plans').then((m) => m.WorkoutPlans),
   },
   {
+    path: 'workouts/recommend',
+    title: "Plan assistant · BarBelle's Fitness Studio",
+    loadComponent: () =>
+      import('./features/workout-recommendation/workout-recommendation').then(
+        (m) => m.WorkoutRecommendation,
+      ),
+  },
+  {
     path: 'progress',
     title: "Progress insights · BarBelle's Fitness Studio",
     loadComponent: () => import('./features/progress/progress-overview').then((m) => m.ProgressOverview),

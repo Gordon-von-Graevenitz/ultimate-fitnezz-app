@@ -1,0 +1,149 @@
+<header class="recommendation-header">
+  <div>
+    <a class="back-link" routerLink="/workouts">← Back to plans</a>
+    <p class="eyebrow">BarBelle's plan assistant</p>
+    <h1 class="page-title">Turn an idea into a workout.</h1>
+    <p class="page-intro">Describe the session or record a short voice note. You stay in control: review every detail before anything is saved.</p>
+  </div>
+  <div class="ai-mark" aria-hidden="true"><span>BB</span><small>AI draft</small></div>
+</header>
+
+@if (!draft()) {
+  <div class="builder-layout">
+    <section class="prompt-card panel" aria-labelledby="request-title">
+      <div class="section-heading">
+        <div><p class="eyebrow">Your request</p><h2 id="request-title">What should today’s workout achieve?</h2></div>
+        <span class="step-badge">1 of 2</span>
+      </div>
+
+      <form [formGroup]="requestForm" (ngSubmit)="generateRecommendation()">
+        <div class="field">
+          <label for="recommendation-client">Use customer context <span>optional</span></label>
+          <select id="recommendation-client" formControlName="clientId">
+            <option value="">No customer selected</option>
+            @for (client of clients(); track client.id) {
+              <option [value]="client.id">{{ client.firstName }} {{ client.lastName }}</option>
+            }
+          </select>
+          <small>Only goal titles and recent workout summaries are sent. Contact details, photos and measurements stay on this device.</small>
+        </div>
+
+        <div class="field prompt-field">
+          <label for="recommendation-prompt">Workout request</label>
+          <textarea id="recommendation-prompt" formControlName="prompt" maxlength="2000" placeholder="For example: Build a 45-minute full-body workout for a beginner using dumbbells, with extra focus on posture…"></textarea>
+          <div class="prompt-actions">
+            <span>{{ requestForm.controls.prompt.value.length }} / 2000</span>
+            <button class="voice-button" type="button" [class.recording]="recording()" [disabled]="transcribing() || generating()" (click)="toggleRecording()">
+              <i aria-hidden="true">{{ recording() ? '■' : '●' }}</i>
+              @if (recording()) { Stop · {{ recordingSeconds() }}s }
+              @else if (transcribing()) { Transcribing… }
+              @else { Push to talk }
+            </button>
+          </div>
+          @if (requestForm.controls.prompt.touched && requestForm.controls.prompt.invalid) {
+            <small class="field-error">Describe the workout in at least five characters.</small>
+          }
+        </div>
+
+        <div class="examples" aria-label="Example workout requests">
+          <span>Try an example</span>
+          @for (example of examplePrompts; track example) {
+            <button type="button" (click)="useExample(example)">{{ example }}</button>
+          }
+        </div>
+
+        @if (errorMessage()) { <div class="message error" role="alert">{{ errorMessage() }}</div> }
+
+        <button class="button primary generate-button" type="submit" [disabled]="generating() || transcribing() || recording()">
+          @if (generating()) { <span class="spinner" aria-hidden="true"></span> Building a thoughtful draft… }
+          @else { Create workout draft <span aria-hidden="true">→</span> }
+        </button>
+      </form>
+    </section>
+
+    <aside class="privacy-card panel">
+      <span class="privacy-icon" aria-hidden="true">◇</span>
+      <p class="eyebrow">Private by design</p>
+      <h2>Hermien makes the final call.</h2>
+      <p>The assistant can suggest library movements or flag a new exercise for approval. It never saves a plan automatically.</p>
+      <ul>
+        <li>Customer identity stays out of the AI request</li>
+        <li>Voice is transcribed, then discarded</li>
+        <li>Plans stay in local device storage</li>
+      </ul>
+      <p class="safety-note">If a request mentions pain, injury, pregnancy or a medical condition, treat the result as a cautious draft and apply professional judgement.</p>
+    </aside>
+  </div>
+} @else if (draft(); as plan) {
+  <section class="review-shell">
+    <header class="review-heading">
+      <div><p class="eyebrow">Review the draft</p><h2>Make it yours before saving.</h2><p>Adjust the plan, approve any new movements, then add it to the Plans library.</p></div>
+      <span class="step-badge">2 of 2</span>
+    </header>
+
+    <div class="plan-summary panel">
+      <div class="field"><label for="draft-name">Plan name</label><input id="draft-name" [value]="plan.planName" maxlength="60" (input)="updatePlanName($any($event.target).value)" /></div>
+      <div class="field"><label for="draft-description">Description</label><textarea id="draft-description" maxlength="240" [value]="plan.description" (input)="updateDescription($any($event.target).value)"></textarea></div>
+      <dl><div><dt>Duration</dt><dd>{{ plan.estimatedMinutes }} min</dd></div><div><dt>Level</dt><dd>{{ plan.difficulty }}</dd></div><div><dt>Exercises</dt><dd>{{ plan.exercises.length }}</dd></div></dl>
+      <p class="rationale"><strong>Why this plan:</strong> {{ plan.rationale }}</p>
+      @if (plan.warnings.length) { <div class="warnings"><strong>Trainer review</strong><ul>@for (warning of plan.warnings; track warning) {<li>{{ warning }}</li>}</ul></div> }
+    </div>
+
+    @if (newExerciseCount()) {
+      <div class="message new-movements"><strong>{{ newExerciseCount() }} new {{ newExerciseCount() === 1 ? 'exercise needs' : 'exercises need' }} approval.</strong> Check the highlighted details. Saving creates these in your exercise library.</div>
+    }
+
+    <div class="draft-exercises">
+      @for (exercise of plan.exercises; track $index; let exerciseIndex = $index) {
+        <article class="draft-exercise panel" [class.is-new]="isNewExercise(exercise)">
+          <header>
+            <span class="order">{{ exerciseIndex + 1 }}</span>
+            <div class="exercise-title">
+              @if (isNewExercise(exercise)) {
+                <span class="new-label">New exercise · approval required</span>
+                <input aria-label="New exercise name" [value]="exercise.name" (input)="updateExerciseText(exerciseIndex, 'name', $any($event.target).value)" />
+              } @else {
+                <span class="library-label">From your exercise library</span><h3>{{ exercise.name }}</h3>
+              }
+            </div>
+            <button class="remove-button" type="button" aria-label="Remove exercise" (click)="removeExercise(exerciseIndex)">×</button>
+          </header>
+
+          @if (isNewExercise(exercise)) {
+            <div class="new-exercise-fields">
+              <div class="field"><label>Category</label><select [value]="exercise.category" (change)="updateExerciseCategory(exerciseIndex, $any($event.target).value)"><option value="strength">Strength</option><option value="cardio">Cardio</option><option value="mobility">Mobility</option><option value="conditioning">Conditioning</option><option value="recovery">Recovery</option></select></div>
+              <div class="field"><label>Primary muscle group</label><input [value]="exercise.primaryMuscleGroup" (input)="updateExerciseText(exerciseIndex, 'primaryMuscleGroup', $any($event.target).value)" /></div>
+              <div class="field"><label>Equipment</label><input [value]="exercise.equipment" (input)="updateExerciseText(exerciseIndex, 'equipment', $any($event.target).value)" /></div>
+              <div class="field wide"><label>Instructions</label><textarea [value]="exercise.instructions ?? ''" (input)="updateExerciseText(exerciseIndex, 'instructions', $any($event.target).value)"></textarea></div>
+            </div>
+          }
+
+          <div class="exercise-meta"><span>{{ exercise.category }}</span><span>{{ exercise.equipment }}</span><label>Rest <input type="number" min="0" max="600" [value]="exercise.restSeconds" (input)="updateRest(exerciseIndex, $any($event.target).value)" /> sec</label></div>
+
+          <div class="sets-table">
+            <div class="set-row set-head"><span>Set</span><span>kg</span><span>Reps</span><span>Seconds</span><span>RPE</span><span></span></div>
+            @for (set of exercise.sets; track $index; let setIndex = $index) {
+              <div class="set-row">
+                <strong>{{ setIndex + 1 }}</strong>
+                <input aria-label="Target kilograms" type="number" min="0" step="0.5" [value]="set.targetWeightKg ?? ''" (input)="updateSet(exerciseIndex, setIndex, 'targetWeightKg', $any($event.target).value)" />
+                <input aria-label="Target repetitions" type="number" min="0" [value]="set.targetReps ?? ''" (input)="updateSet(exerciseIndex, setIndex, 'targetReps', $any($event.target).value)" />
+                <input aria-label="Target seconds" type="number" min="0" [value]="set.targetDurationSeconds ?? ''" (input)="updateSet(exerciseIndex, setIndex, 'targetDurationSeconds', $any($event.target).value)" />
+                <input aria-label="Target RPE" type="number" min="1" max="10" [value]="set.targetRpe ?? ''" (input)="updateSet(exerciseIndex, setIndex, 'targetRpe', $any($event.target).value)" />
+                <button type="button" aria-label="Remove set" [disabled]="exercise.sets.length === 1" (click)="removeSet(exerciseIndex, setIndex)">×</button>
+              </div>
+            }
+          </div>
+          <button class="add-set" type="button" [disabled]="exercise.sets.length >= 6" (click)="addSet(exerciseIndex)">+ Add set</button>
+          @if (exercise.notes) { <p class="coach-note"><strong>Coaching note:</strong> {{ exercise.notes }}</p> }
+        </article>
+      }
+    </div>
+
+    @if (errorMessage()) { <div class="message error" role="alert">{{ errorMessage() }}</div> }
+
+    <footer class="review-actions panel">
+      <button class="button" type="button" (click)="startOver()">Discard and start over</button>
+      <button class="button primary" type="button" [disabled]="saving()" (click)="savePlan()">{{ saving() ? 'Saving…' : 'Accept and add to plans' }}</button>
+    </footer>
+  </section>
+}

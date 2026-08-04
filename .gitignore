@@ -5,9 +5,12 @@
 /tmp
 /out-tsc
 /bazel-out
+/.wrangler/
 
 # Node
 /node_modules
+.dev.vars*
+.env*
 npm-debug.log
 yarn-error.log
 
