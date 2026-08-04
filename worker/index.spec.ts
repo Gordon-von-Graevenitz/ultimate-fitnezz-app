@@ -17,7 +17,7 @@ describe('AI workout Worker', () => {
         new Request('https://example.com/api/auth/session', {
           headers: {
             'CF-Connecting-IP': '198.51.100.20',
-            'Cf-Access-Authenticated-User-Email': 'hermien@example.com',
+            'Cf-Access-Authenticated-User-Email': 'trainer@example.com',
           },
         }),
         env,
@@ -26,7 +26,7 @@ describe('AI workout Worker', () => {
       expect(response.headers.get('Cache-Control')).toContain('no-store');
       expect(await response.json()).toEqual({
         authenticated: true,
-        email: 'hermien@example.com',
+        email: 'trainer@example.com',
       });
     }
 

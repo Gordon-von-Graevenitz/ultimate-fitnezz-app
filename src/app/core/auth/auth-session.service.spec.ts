@@ -28,11 +28,11 @@ describe('AuthSessionService', () => {
         candidate.url === '/api/auth/session' &&
         candidate.params.get('ngsw-bypass') === 'auth-session',
     );
-    request.flush({ authenticated: true, email: 'hermien@example.com' });
+    request.flush({ authenticated: true, email: 'trainer@example.com' });
 
     await expect(result).resolves.toBe(true);
     expect(service.status()).toBe('authenticated');
-    expect(service.email()).toBe('hermien@example.com');
+    expect(service.email()).toBe('trainer@example.com');
   });
 
   it('blocks access when the session request fails', async () => {

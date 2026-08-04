@@ -27,11 +27,11 @@ Complete this before sharing the AI-enabled deployment:
 3. Go to **Settings → Authentication → Login methods** and enable **One-time PIN**.
 4. Go to **Access controls → Applications → Add an application**.
 5. Choose **Self-hosted** and enter the deployed BarBelle's Worker hostname.
-6. Create an **Allow** policy using **Emails** and add only the approved email addresses for Hermien and the owner.
+6. Create an **Allow** policy using **Emails** and add only the approved trainer and owner email addresses.
 7. Set a session duration appropriate for the trainer's device, such as one week.
 8. Save the policy and verify the site shows Cloudflare's email-code login before Angular loads.
 
-Cloudflare Access protects the entire application, including both `/api/ai/*` endpoints. The round trainer avatar links to `/cdn-cgi/access/logout` so Hermien can end the session.
+Cloudflare Access protects the entire application, including both `/api/ai/*` endpoints. The round trainer avatar links to `/cdn-cgi/access/logout` so the trainer can end the session.
 
 ## Privacy and abuse controls
 
