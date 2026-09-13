@@ -172,6 +172,16 @@
   font-weight: 700;
 }
 
+.coach-avatar svg {
+  width: 1.2rem;
+  height: 1.2rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
 .menu-button,
 .bottom-nav {
   display: none;
