@@ -12,6 +12,7 @@ import { provideServiceWorker } from '@angular/service-worker';
 import { routes } from './app.routes';
 import { AuthSessionService } from './core/auth/auth-session.service';
 import { authInterceptor } from './core/auth/auth.interceptor';
+import { LocalDataStore } from './core/data/local-data.store';
 import { PwaUpdateService } from './core/pwa/pwa-update.service';
 
 export const appConfig: ApplicationConfig = {
@@ -25,7 +26,13 @@ export const appConfig: ApplicationConfig = {
     }),
     provideAppInitializer(() => {
       inject(PwaUpdateService).start();
-      return inject(AuthSessionService).initialize();
+      const auth = inject(AuthSessionService);
+      const data = inject(LocalDataStore);
+      return auth.initialize().then(() =>
+        auth.status() === 'authenticated'
+          ? data.initializeCloudSync(auth.remoteSessionRequired, auth.email())
+          : undefined,
+      );
     }),
   ],
 };

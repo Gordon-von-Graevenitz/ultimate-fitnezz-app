@@ -1,5 +1,6 @@
 import { computed, inject, Injectable, InjectionToken, signal } from '@angular/core';
 import { createDemoFitnessData } from './demo-data';
+import { FitnessDataApi } from './fitness-data.api';
 import {
   BodyMeasurement,
   Client,
@@ -8,18 +9,15 @@ import {
   CreateExerciseInput,
   CreateGoalInput,
   CreateMeasurementInput,
-  CreateProgressPhotoInput,
   CreateWorkoutSessionInput,
   CreateWorkoutTemplateInput,
   EntityId,
   Exercise,
   FitnessDataSnapshot,
-  ProgressPhoto,
   UpdateClientInput,
   UpdateExerciseInput,
   UpdateGoalInput,
   UpdateMeasurementInput,
-  UpdateProgressPhotoInput,
   UpdateWorkoutSessionInput,
   UpdateWorkoutTemplateInput,
   WorkoutSession,
@@ -27,6 +25,7 @@ import {
 } from '../models/fitness.models';
 
 export const LOCAL_DATA_STORAGE_KEY = 'ultimate-fitnezz.local-data.v1';
+const ACCOUNT_CACHE_PREFIX = 'ultimate-fitnezz.account-cache.v1:';
 
 export const LOCAL_DATA_STORAGE = new InjectionToken<Storage | null>('LOCAL_DATA_STORAGE', {
   providedIn: 'root',
@@ -40,17 +39,36 @@ export const LOCAL_DATA_STORAGE = new InjectionToken<Storage | null>('LOCAL_DATA
 });
 
 export type PersistenceStatus = 'available' | 'unavailable' | 'error';
+export type CloudSyncStatus =
+  | 'local'
+  | 'loading'
+  | 'migration-pending'
+  | 'syncing'
+  | 'synced'
+  | 'error';
 
 @Injectable({ providedIn: 'root' })
 export class LocalDataStore {
   private readonly storage = inject(LOCAL_DATA_STORAGE);
-  private readonly dataState = signal<FitnessDataSnapshot>(this.loadInitialData());
+  private readonly api = inject(FitnessDataApi);
+  private readonly storedSnapshot = this.loadStoredData();
+  private readonly dataState = signal<FitnessDataSnapshot>(
+    this.storedSnapshot ?? createDemoFitnessData(),
+  );
   private readonly persistenceState = signal<PersistenceStatus>(
     this.storage === null ? 'unavailable' : 'available',
   );
+  private readonly cloudState = signal<CloudSyncStatus>('local');
+  private readonly cloudErrorState = signal<string | null>(null);
+  private cloudEnabled = false;
+  private deviceStorageKey = LOCAL_DATA_STORAGE_KEY;
+  private saveQueue: Promise<void> = Promise.resolve();
 
   readonly snapshot = this.dataState.asReadonly();
   readonly persistenceStatus = this.persistenceState.asReadonly();
+  readonly cloudSyncStatus = this.cloudState.asReadonly();
+  readonly cloudSyncError = this.cloudErrorState.asReadonly();
+  readonly migrationPending = computed(() => this.cloudState() === 'migration-pending');
 
   readonly clients = computed(() => this.dataState().clients);
   readonly activeClients = computed(() =>
@@ -58,7 +76,6 @@ export class LocalDataStore {
   );
   readonly goals = computed(() => this.dataState().goals);
   readonly measurements = computed(() => this.dataState().measurements);
-  readonly progressPhotos = computed(() => this.dataState().progressPhotos);
   readonly exercises = computed(() => this.dataState().exercises);
   readonly workoutTemplates = computed(() => this.dataState().workoutTemplates);
   readonly workoutSessions = computed(() => this.dataState().workoutSessions);
@@ -66,6 +83,61 @@ export class LocalDataStore {
   /** Concise aliases used by feature components. */
   readonly templates = this.workoutTemplates;
   readonly sessions = this.workoutSessions;
+
+  async initializeCloudSync(enabled: boolean, accountEmail?: string | null): Promise<void> {
+    if (!enabled) return;
+
+    this.deviceStorageKey = `${ACCOUNT_CACHE_PREFIX}${(accountEmail ?? 'unknown').trim().toLowerCase()}`;
+    const accountCache = this.loadStoredData(this.deviceStorageKey);
+    this.dataState.set(accountCache ?? this.emptySnapshot());
+    this.cloudState.set('loading');
+    this.cloudErrorState.set(null);
+    try {
+      const envelope = await this.api.load();
+      if (envelope.hasData) {
+        this.cloudEnabled = true;
+        this.replaceData(this.normalizeSnapshot(envelope.snapshot), false);
+        this.cloudState.set('synced');
+        return;
+      }
+
+      if (accountCache || this.storedSnapshot) {
+        this.dataState.set(accountCache ?? this.storedSnapshot!);
+        this.cloudState.set('migration-pending');
+        return;
+      }
+
+      this.cloudEnabled = true;
+      this.replaceData(this.emptySnapshot(), false);
+      this.cloudState.set('synced');
+    } catch {
+      this.cloudState.set('error');
+      this.cloudErrorState.set(
+        'Cloud data could not be loaded. This device copy is still available; try again when online.',
+      );
+    }
+  }
+
+  async importDeviceData(): Promise<void> {
+    if (!this.migrationPending()) return;
+    this.cloudState.set('syncing');
+    this.cloudErrorState.set(null);
+    try {
+      const envelope = await this.api.save(this.dataState());
+      this.cloudEnabled = true;
+      this.replaceData(this.normalizeSnapshot(envelope.snapshot), false);
+      this.removeLegacyDeviceCopy();
+      this.cloudState.set('synced');
+    } catch {
+      this.cloudState.set('migration-pending');
+      this.cloudErrorState.set('The import did not complete. No device data was removed; try again.');
+    }
+  }
+
+  retryCloudSync(): void {
+    if (!this.cloudEnabled) return;
+    this.queueCloudSave(this.dataState());
+  }
 
   clientById(id: EntityId): Client | undefined {
     return this.clients().find((client) => client.id === id);
@@ -90,12 +162,6 @@ export class LocalDataStore {
   measurementsForClient(clientId: EntityId): readonly BodyMeasurement[] {
     return [...this.measurements().filter((measurement) => measurement.clientId === clientId)].sort(
       (a, b) => a.recordedAt.localeCompare(b.recordedAt),
-    );
-  }
-
-  photosForClient(clientId: EntityId): readonly ProgressPhoto[] {
-    return [...this.progressPhotos().filter((photo) => photo.clientId === clientId)].sort((a, b) =>
-      b.recordedAt.localeCompare(a.recordedAt),
     );
   }
 
@@ -126,7 +192,6 @@ export class LocalDataStore {
       clients: data.clients.filter((client) => client.id !== id),
       goals: data.goals.filter((goal) => goal.clientId !== id),
       measurements: data.measurements.filter((measurement) => measurement.clientId !== id),
-      progressPhotos: data.progressPhotos.filter((photo) => photo.clientId !== id),
       workoutSessions: data.workoutSessions.filter((session) => session.clientId !== id),
     }));
     return true;
@@ -167,22 +232,6 @@ export class LocalDataStore {
 
   deleteMeasurement(id: EntityId): boolean {
     return this.deleteEntity('measurements', id);
-  }
-
-  createProgressPhoto(input: CreateProgressPhotoInput): ProgressPhoto {
-    this.assertClientExists(input.clientId);
-    const now = this.now();
-    const photo: ProgressPhoto = { ...input, id: this.createId(), createdAt: now, updatedAt: now };
-    this.commit((data) => ({ ...data, progressPhotos: [...data.progressPhotos, photo] }));
-    return photo;
-  }
-
-  updateProgressPhoto(id: EntityId, changes: UpdateProgressPhotoInput): ProgressPhoto | undefined {
-    return this.updateEntity('progressPhotos', id, changes);
-  }
-
-  deleteProgressPhoto(id: EntityId): boolean {
-    return this.deleteEntity('progressPhotos', id);
   }
 
   createExercise(input: CreateExerciseInput): Exercise {
@@ -274,21 +323,21 @@ export class LocalDataStore {
     this.replaceData(createDemoFitnessData());
   }
 
-  private loadInitialData(): FitnessDataSnapshot {
+  private loadStoredData(key = LOCAL_DATA_STORAGE_KEY): FitnessDataSnapshot | undefined {
     if (!this.storage) {
-      return createDemoFitnessData();
+      return undefined;
     }
 
     try {
-      const storedValue = this.storage.getItem(LOCAL_DATA_STORAGE_KEY);
+      const storedValue = this.storage.getItem(key);
       if (!storedValue) {
-        return createDemoFitnessData();
+        return undefined;
       }
 
       const parsed: unknown = JSON.parse(storedValue);
-      return this.isFitnessDataSnapshot(parsed) ? parsed : createDemoFitnessData();
+      return this.isFitnessDataSnapshot(parsed) ? this.normalizeSnapshot(parsed) : undefined;
     } catch {
-      return createDemoFitnessData();
+      return undefined;
     }
   }
 
@@ -296,20 +345,57 @@ export class LocalDataStore {
     this.replaceData(mutator(this.dataState()));
   }
 
-  private replaceData(data: FitnessDataSnapshot): void {
+  private replaceData(data: FitnessDataSnapshot, syncToCloud = true): void {
     this.dataState.set(data);
+    this.persistDeviceCopy(data);
+    if (syncToCloud && this.cloudEnabled) {
+      this.queueCloudSave(data);
+    }
+  }
+
+  private persistDeviceCopy(data: FitnessDataSnapshot): void {
     if (!this.storage) {
       this.persistenceState.set('unavailable');
       return;
     }
 
     try {
-      this.storage.setItem(LOCAL_DATA_STORAGE_KEY, JSON.stringify(data));
+      this.storage.setItem(this.deviceStorageKey, JSON.stringify(data));
       this.persistenceState.set('available');
     } catch {
       // Keep the in-memory update usable even when privacy mode or quota blocks persistence.
       this.persistenceState.set('error');
     }
+  }
+
+  private removeLegacyDeviceCopy(): void {
+    if (!this.storage || this.deviceStorageKey === LOCAL_DATA_STORAGE_KEY) return;
+    try {
+      this.storage.removeItem(LOCAL_DATA_STORAGE_KEY);
+    } catch {
+      // The confirmed account-scoped copy remains available even if legacy cleanup is blocked.
+    }
+  }
+
+  private queueCloudSave(data: FitnessDataSnapshot): void {
+    const snapshot = this.normalizeSnapshot(data);
+    const expected = JSON.stringify(snapshot);
+    this.cloudState.set('syncing');
+    this.cloudErrorState.set(null);
+    this.saveQueue = this.saveQueue
+      .catch(() => undefined)
+      .then(async () => {
+        await this.api.save(snapshot);
+        if (JSON.stringify(this.dataState()) === expected) {
+          this.cloudState.set('synced');
+        }
+      })
+      .catch(() => {
+        this.cloudState.set('error');
+        this.cloudErrorState.set(
+          'This change is saved on this device but has not reached the cloud. Try again when online.',
+        );
+      });
   }
 
   private updateEntity<K extends MutableCollectionKey>(
@@ -374,11 +460,34 @@ export class LocalDataStore {
       Array.isArray(candidate['clients']) &&
       Array.isArray(candidate['goals']) &&
       Array.isArray(candidate['measurements']) &&
-      Array.isArray(candidate['progressPhotos']) &&
       Array.isArray(candidate['exercises']) &&
       Array.isArray(candidate['workoutTemplates']) &&
       Array.isArray(candidate['workoutSessions'])
     );
+  }
+
+  private normalizeSnapshot(value: FitnessDataSnapshot): FitnessDataSnapshot {
+    return {
+      schemaVersion: 1,
+      clients: value.clients,
+      goals: value.goals,
+      measurements: value.measurements,
+      exercises: value.exercises,
+      workoutTemplates: value.workoutTemplates,
+      workoutSessions: value.workoutSessions,
+    };
+  }
+
+  private emptySnapshot(): FitnessDataSnapshot {
+    return {
+      schemaVersion: 1,
+      clients: [],
+      goals: [],
+      measurements: [],
+      exercises: [],
+      workoutTemplates: [],
+      workoutSessions: [],
+    };
   }
 
   private createId(): EntityId {
@@ -398,7 +507,6 @@ type MutableCollectionKey =
   | 'clients'
   | 'goals'
   | 'measurements'
-  | 'progressPhotos'
   | 'exercises'
   | 'workoutTemplates'
   | 'workoutSessions';

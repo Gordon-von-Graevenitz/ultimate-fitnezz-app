@@ -1,0 +1,4 @@
+# Copy this file to .dev.vars to enable the localhost-only development identity.
+LOCAL_DEV_AUTH_ENABLED="true"
+LOCAL_DEV_EMAIL="trainer@local.test"
+LOCAL_DEV_SUBJECT="local-trainer"

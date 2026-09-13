@@ -58,6 +58,24 @@
       >
     </header>
 
+    @if (data.migrationPending()) {
+      <aside class="sync-banner migration" role="status">
+        <div>
+          <strong>Move this device's existing data to your secure account?</strong>
+          <span>This is a one-time import. Nothing is removed from this device unless the upload succeeds.</span>
+          @if (data.cloudSyncError()) { <small>{{ data.cloudSyncError() }}</small> }
+        </div>
+        <button type="button" (click)="importDeviceData()">Import now</button>
+      </aside>
+    } @else if (data.cloudSyncStatus() === 'error') {
+      <aside class="sync-banner error" role="alert">
+        <div><strong>Cloud sync needs attention</strong><span>{{ data.cloudSyncError() }}</span></div>
+        <button type="button" (click)="retryCloudSync()">Try again</button>
+      </aside>
+    } @else if (data.cloudSyncStatus() === 'syncing') {
+      <div class="sync-toast" role="status">Saving securely…</div>
+    }
+
     <main class="page-shell">
       <router-outlet />
     </main>

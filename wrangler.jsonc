@@ -1,7 +1,8 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "barbelles-fitness",
-  "compatibility_date": "2026-08-02",
+  "name": "ultimate-fitnezz-app",
+  "compatibility_date": "2026-09-13",
+  "compatibility_flags": ["nodejs_compat"],
   "main": "worker/index.ts",
   "assets": {
     "directory": "./dist/ultimate-fitnezz/browser",
@@ -12,8 +13,21 @@
   "ai": {
     "binding": "AI"
   },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "barbelles-fitness-prod",
+      "database_id": "b4d9e04b-f25a-4be8-9362-12859fc53c05",
+      "migrations_dir": "./migrations"
+    }
+  ],
   "vars": {
     "AI_TEXT_MODEL": "@cf/meta/llama-3.1-8b-instruct-fast",
-    "AI_TRANSCRIPTION_MODEL": "@cf/openai/whisper"
+    "AI_TRANSCRIPTION_MODEL": "@cf/openai/whisper",
+    "ACCESS_AUD": "a1696166024f9132d7f1b34e2411b371753ddf5e489328d2ce694f586854b1e4",
+    "ACCESS_ISSUER": "https://jolly-flower-d6c7.cloudflareaccess.com",
+    "LOCAL_DEV_AUTH_ENABLED": "false",
+    "LOCAL_DEV_EMAIL": "",
+    "LOCAL_DEV_SUBJECT": ""
   }
 }

@@ -1,17 +1,5 @@
-interface AiBinding {
-  run(model: string, input: Record<string, unknown>): Promise<unknown>;
-}
-
-interface AssetsBinding {
-  fetch(request: Request): Promise<Response>;
-}
-
-interface Env {
-  readonly AI: AiBinding;
-  readonly ASSETS: AssetsBinding;
-  readonly AI_TEXT_MODEL?: string;
-  readonly AI_TRANSCRIPTION_MODEL?: string;
-}
+import { createRemoteJWKSet, jwtVerify, type JWTVerifyGetKey } from 'jose';
+import { FitnessDataError, readFitnessData, replaceFitnessData } from './fitness-data';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -25,6 +13,16 @@ const exerciseCategories = ['strength', 'cardio', 'mobility', 'conditioning', 'r
 const exerciseMetrics = ['weight', 'reps', 'duration', 'distance', 'rpe', 'notes'] as const;
 const difficulties = ['beginner', 'intermediate', 'advanced'] as const;
 const rateWindows = new Map<string, { count: number; resetAt: number }>();
+const accessKeySets = new Map<string, JWTVerifyGetKey>();
+
+interface AccessIdentity {
+  readonly subject: string;
+  readonly email: string;
+}
+
+interface AppUserIdentity extends AccessIdentity {
+  readonly ownerUserId: string;
+}
 
 const workoutDraftSchema = {
   type: 'object',
@@ -105,7 +103,7 @@ const workoutDraftSchema = {
   ],
 };
 
-export default {
+const worker = {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
     if (!url.pathname.startsWith('/api/')) {
@@ -113,24 +111,38 @@ export default {
     }
 
     const requestId = crypto.randomUUID();
-    if (url.pathname === '/api/auth/session') {
-      if (request.method !== 'GET') {
-        return json({ error: 'Method not allowed.', requestId }, 405, { Allow: 'GET' });
-      }
-      return json({
-        authenticated: true,
-        email: request.headers.get('Cf-Access-Authenticated-User-Email'),
-      });
-    }
-
-    if (!allowRequest(request)) {
-      return json(
-        { error: 'Too many AI requests. Please wait a few minutes and try again.', requestId },
-        429,
-      );
-    }
-
     try {
+      const identity = await authenticateAccessRequest(request, env);
+
+      if (url.pathname === '/api/auth/session') {
+        if (request.method !== 'GET') {
+          return json({ error: 'Method not allowed.', requestId }, 405, { Allow: 'GET' });
+        }
+        const appUser = await resolveAppUser(env.DB, identity);
+        return json({
+          authenticated: true,
+          email: appUser.email,
+        });
+      }
+
+      if (url.pathname === '/api/data') {
+        const appUser = await resolveAppUser(env.DB, identity);
+        if (request.method === 'GET') {
+          return json(await readFitnessData(env.DB, appUser.ownerUserId));
+        }
+        if (request.method === 'PUT') {
+          return json(await replaceFitnessData(request, env.DB, appUser.ownerUserId, requestId));
+        }
+        return json({ error: 'Method not allowed.', requestId }, 405, { Allow: 'GET, PUT' });
+      }
+
+      if (!allowRequest(identity.subject)) {
+        return json(
+          { error: 'Too many AI requests. Please wait a few minutes and try again.', requestId },
+          429,
+        );
+      }
+
       if (url.pathname === '/api/ai/transcribe' && request.method === 'POST') {
         return await transcribe(request, env);
       }
@@ -139,18 +151,149 @@ export default {
       }
       return json({ error: 'API route not found.', requestId }, 404);
     } catch (error) {
-      const handledError = error instanceof RequestError ? error : cloudflareAiError(error);
-      console.error('AI API request failed', {
-        requestId,
-        path: url.pathname,
-        error: errorDescription(error),
-      });
+      if (error instanceof AccessAuthenticationError) {
+        console.warn(
+          JSON.stringify({
+            message: 'Cloudflare Access authentication rejected',
+            requestId,
+            path: url.pathname,
+            reason: error.reason,
+          }),
+        );
+        return json(
+          { authenticated: false, error: error.message, requestId },
+          error.status,
+          error.status === 401 ? { 'WWW-Authenticate': 'Bearer' } : undefined,
+        );
+      }
+      const handledError =
+        error instanceof RequestError || error instanceof FitnessDataError
+          ? error
+          : cloudflareAiError(error);
+      console.error(
+        JSON.stringify({
+          message: 'API request failed',
+          requestId,
+          path: url.pathname,
+          error: errorDescription(error),
+        }),
+      );
       const message = handledError?.message ?? 'The AI service is temporarily unavailable.';
       const status = handledError?.status ?? 502;
       return json({ error: message, requestId }, status);
     }
   },
-};
+} satisfies ExportedHandler<Env>;
+
+export default worker;
+
+async function authenticateAccessRequest(request: Request, env: Env): Promise<AccessIdentity> {
+  const localIdentity = localDevelopmentIdentity(request, env);
+  if (localIdentity) return localIdentity;
+
+  const issuer = env.ACCESS_ISSUER.replace(/\/+$/, '');
+  const audience = env.ACCESS_AUD.trim();
+  if (!issuer || !audience) {
+    throw new AccessAuthenticationError(
+      'Authentication is temporarily unavailable.',
+      503,
+      'missing_access_configuration',
+    );
+  }
+
+  const token = request.headers.get('Cf-Access-Jwt-Assertion');
+  if (!token) {
+    throw new AccessAuthenticationError(
+      'A valid sign-in session is required.',
+      401,
+      'missing_access_token',
+    );
+  }
+
+  try {
+    const { payload } = await jwtVerify(token, accessKeySet(issuer), {
+      issuer,
+      audience,
+      algorithms: ['RS256'],
+    });
+    const subject = cleanString(payload.sub, 512);
+    const email = cleanString(payload['email'], 320).toLowerCase();
+    if (!subject || !email) {
+      throw new AccessAuthenticationError(
+        'The sign-in session is missing a verified identity.',
+        403,
+        'missing_identity_claims',
+      );
+    }
+    return { subject, email };
+  } catch (error) {
+    if (error instanceof AccessAuthenticationError) throw error;
+    throw new AccessAuthenticationError(
+      'The sign-in session is invalid or has expired.',
+      401,
+      'invalid_access_token',
+    );
+  }
+}
+
+function localDevelopmentIdentity(request: Request, env: Env): AccessIdentity | undefined {
+  if (env.LOCAL_DEV_AUTH_ENABLED !== 'true') return undefined;
+
+  const hostname = new URL(request.url).hostname.toLowerCase();
+  if (!['localhost', '127.0.0.1', '[::1]'].includes(hostname)) return undefined;
+
+  const email = cleanString(env.LOCAL_DEV_EMAIL, 320).toLowerCase();
+  const subject = cleanString(env.LOCAL_DEV_SUBJECT, 512);
+  if (!email || !subject) {
+    throw new AccessAuthenticationError(
+      'Local authentication is not configured.',
+      503,
+      'missing_local_identity',
+    );
+  }
+
+  return { email, subject };
+}
+
+function accessKeySet(issuer: string): JWTVerifyGetKey {
+  const existing = accessKeySets.get(issuer);
+  if (existing) return existing;
+
+  const keySet = createRemoteJWKSet(new URL(`${issuer}/cdn-cgi/access/certs`));
+  accessKeySets.set(issuer, keySet);
+  return keySet;
+}
+
+async function resolveAppUser(
+  database: D1Database,
+  identity: AccessIdentity,
+): Promise<AppUserIdentity> {
+  const ownerUserId = crypto.randomUUID();
+  const row = await database
+    .prepare(
+      `INSERT INTO app_users (id, access_subject, email)
+       VALUES (?1, ?2, ?3)
+       ON CONFLICT(access_subject) DO UPDATE SET
+         email = excluded.email,
+         updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+       ON CONFLICT(email) DO UPDATE SET
+         access_subject = excluded.access_subject,
+         updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+       RETURNING id, access_subject, email`,
+    )
+    .bind(ownerUserId, identity.subject, identity.email)
+    .first<{ id: string; access_subject: string; email: string }>();
+
+  if (!row?.id || !row.access_subject || !row.email) {
+    throw new RequestError('The signed-in user could not be initialised.', 500);
+  }
+
+  return {
+    ownerUserId: row.id,
+    subject: row.access_subject,
+    email: row.email.toLowerCase(),
+  };
+}
 
 async function transcribe(request: Request, env: Env): Promise<Response> {
   assertContentLength(request, MAX_AUDIO_BYTES + 32_000);
@@ -398,11 +541,8 @@ function inferMetrics(sets: JsonRecord[]): string[] {
     .map(([, metric]) => metric);
 }
 
-function allowRequest(request: Request): boolean {
-  const key =
-    request.headers.get('Cf-Access-Authenticated-User-Email') ||
-    request.headers.get('CF-Connecting-IP') ||
-    'anonymous';
+function allowRequest(authenticatedSubject: string): boolean {
+  const key = authenticatedSubject;
   const now = Date.now();
   const current = rateWindows.get(key);
   if (!current || current.resetAt <= now) {
@@ -506,6 +646,16 @@ class RequestError extends Error {
   constructor(
     message: string,
     readonly status: number,
+  ) {
+    super(message);
+  }
+}
+
+class AccessAuthenticationError extends Error {
+  constructor(
+    message: string,
+    readonly status: 401 | 403 | 503,
+    readonly reason: string,
   ) {
     super(message);
   }

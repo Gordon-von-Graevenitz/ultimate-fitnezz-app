@@ -28,7 +28,7 @@
         <article><span>Completed sessions</span><strong>{{ completedSessions() }}</strong><small>All time</small></article>
         <article><span>Current weight</span><strong>{{ latestMeasurement()?.bodyWeightKg ?? '—' }}<i>@if (latestMeasurement()?.bodyWeightKg) { kg }</i></strong><small>@if (weightChange() !== undefined) { {{ weightChange()! > 0 ? '+' : '' }}{{ weightChange()!.toFixed(1) }} kg overall } @else { Add another check-in }</small></article>
         <article><span>Active goals</span><strong>{{ activeGoals().length }}</strong><small>{{ goals().length }} total</small></article>
-        <article><span>Progress photos</span><strong>{{ photos().length }}</strong><small>Private to this device</small></article>
+        <article><span>Check-ins</span><strong>{{ measurements().length }}</strong><small>Measurements recorded</small></article>
       </section>
 
       <div class="overview-grid">
@@ -78,17 +78,12 @@
 
     @if (activeTab() === 'progress') {
       <section class="tab-panel">
-        <div class="section-heading progress-heading"><div><p class="eyebrow">The whole picture</p><h2>Progress timeline</h2></div><div><button class="small-button" type="button" (click)="isPhotoOpen.set(true)">＋ Photo</button><button class="primary-button" type="button" (click)="openMeasurement()">＋ Check-in</button></div></div>
+        <div class="section-heading progress-heading"><div><p class="eyebrow">The whole picture</p><h2>Progress timeline</h2></div><div><button class="primary-button" type="button" (click)="openMeasurement()">＋ Check-in</button></div></div>
         <div class="progress-layout">
           <div class="panel measurement-panel">
             <h3>Measurements</h3>
             @if (measurements().length) { <div class="measurement-list">@for (measurement of measurements(); track measurement.id) { <article><time>{{ formatDate(measurement.recordedAt) }}</time><div class="measure-values">@if (measurement.bodyWeightKg) { <span><strong>{{ measurement.bodyWeightKg }}</strong> kg</span> } @if (measurement.bodyFatPercent) { <span><strong>{{ measurement.bodyFatPercent }}</strong> % fat</span> } @if (measurement.waistCm) { <span><strong>{{ measurement.waistCm }}</strong> cm waist</span> } @if (measurement.restingHeartRateBpm) { <span><strong>{{ measurement.restingHeartRateBpm }}</strong> bpm</span> }</div>@if (measurement.notes) { <p>{{ measurement.notes }}</p> }</article> }</div> }
             @else { <div class="panel-empty"><p>No check-ins yet. Measurements are most useful when captured consistently.</p><button type="button" (click)="openMeasurement()">Add first check-in</button></div> }
-          </div>
-          <div class="panel photo-panel">
-            <h3>Progress photos</h3>
-            @if (photos().length) { <div class="photo-grid">@for (photo of photos(); track photo.id) { <figure>@if (photo.localPreviewUrl) { <img [src]="photo.localPreviewUrl" [alt]="photo.caption || photo.angle + ' progress photo'" /> } @else { <div class="photo-placeholder"><span>Photo</span></div> }<figcaption><strong>{{ photo.angle }}</strong><span>{{ formatDate(photo.recordedAt) }}</span></figcaption></figure> }</div> }
-            @else { <div class="panel-empty"><p>Photos stay on this device and provide a visual record alongside the numbers.</p><button type="button" (click)="isPhotoOpen.set(true)">Add a photo</button></div> }
           </div>
         </div>
       </section>
@@ -104,8 +99,4 @@
 
 @if (isGoalOpen()) {
   <div class="modal-backdrop" (click)="isGoalOpen.set(false)"><section class="modal" role="dialog" aria-modal="true" aria-labelledby="goal-title" (click)="$event.stopPropagation()"><div class="modal-header"><div><p class="eyebrow">A clear direction</p><h2 id="goal-title">Create a goal</h2></div><button class="icon-button" type="button" aria-label="Close" (click)="isGoalOpen.set(false)">×</button></div><form [formGroup]="goalForm" (ngSubmit)="saveGoal()"><div class="form-grid"><label class="wide">Goal title <span>*</span><input formControlName="title" placeholder="What are we working toward?" /></label><label>Category<select formControlName="category"><option value="strength">Strength</option><option value="body-composition">Body composition</option><option value="endurance">Endurance</option><option value="mobility">Mobility</option><option value="habit">Habit</option><option value="other">Other</option></select></label><label>Target date<input type="date" formControlName="targetDate" /></label><label>Current value<input type="number" formControlName="currentValue" /></label><label>Target value<input type="number" formControlName="targetValue" /></label><label>Unit<input formControlName="unit" placeholder="kg, reps, minutes…" /></label><label class="wide">Notes<textarea rows="3" formControlName="notes"></textarea></label></div><div class="modal-actions"><button class="text-button" type="button" (click)="isGoalOpen.set(false)">Cancel</button><button class="primary-button" type="submit">Save goal</button></div></form></section></div>
-}
-
-@if (isPhotoOpen()) {
-  <div class="modal-backdrop" (click)="isPhotoOpen.set(false)"><section class="modal" role="dialog" aria-modal="true" aria-labelledby="photo-title" (click)="$event.stopPropagation()"><div class="modal-header"><div><p class="eyebrow">Visual progress</p><h2 id="photo-title">Add a progress photo</h2></div><button class="icon-button" type="button" aria-label="Close" (click)="isPhotoOpen.set(false)">×</button></div><form [formGroup]="photoForm" (ngSubmit)="savePhoto()"><label class="photo-drop">@if (photoPreview()) { <img [src]="photoPreview()" alt="Selected progress preview" /> } @else { <span aria-hidden="true">＋</span><strong>Choose a photo</strong><small>JPG, PNG or HEIC</small> }<input type="file" accept="image/*" (change)="choosePhoto($event)" /></label><div class="form-grid"><label>Date<input type="date" formControlName="recordedAt" /></label><label>Angle<select formControlName="angle"><option value="front">Front</option><option value="side">Side</option><option value="back">Back</option><option value="other">Other</option></select></label><label class="wide">Caption<input formControlName="caption" placeholder="Optional note about this photo" /></label></div><p class="privacy-note">Stored locally for this prototype. Images will not sync to another device.</p><div class="modal-actions"><button class="text-button" type="button" (click)="isPhotoOpen.set(false)">Cancel</button><button class="primary-button" type="submit" [disabled]="!photoFileName()">Save photo</button></div></form></section></div>
 }
