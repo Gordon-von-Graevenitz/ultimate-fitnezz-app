@@ -1,12 +1,92 @@
-import { describe, expect, it, vi } from 'vitest';
+import { exportJWK, generateKeyPair, SignJWT } from 'jose';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import worker from './index';
 
-function environment(aiResponse: unknown) {
+const ACCESS_ISSUER = 'https://jolly-flower-d6c7.cloudflareaccess.com';
+const ACCESS_AUD = 'a1696166024f9132d7f1b34e2411b371753ddf5e489328d2ce694f586854b1e4';
+const KEY_ID = 'test-access-key';
+let signingKey: CryptoKey;
+
+function environment(
+  aiResponse: unknown,
+  localAuth: {
+    enabled?: string;
+    email?: string;
+    subject?: string;
+  } = {},
+) {
+  const statement = {
+    bind: vi.fn(),
+    first: vi.fn(async () => ({
+      id: 'internal-user-id',
+      access_subject: localAuth.subject ?? 'access-subject-trainer',
+      email: localAuth.email ?? 'trainer@example.com',
+    })),
+  };
+  statement.bind.mockReturnValue(statement);
+
+  const database = {
+    prepare: vi.fn(() => statement),
+    batch: vi.fn(async (statements: unknown[]) => statements.map(() => ({ results: [] }))),
+  };
+
   return {
     AI: { run: vi.fn(async () => aiResponse) },
     ASSETS: { fetch: vi.fn(async () => new Response('app asset')) },
+    DB: database,
+    AI_TEXT_MODEL: '@cf/meta/llama-3.1-8b-instruct-fast',
+    AI_TRANSCRIPTION_MODEL: '@cf/openai/whisper',
+    ACCESS_AUD,
+    ACCESS_ISSUER,
+    LOCAL_DEV_AUTH_ENABLED: localAuth.enabled ?? 'false',
+    LOCAL_DEV_EMAIL: localAuth.email ?? '',
+    LOCAL_DEV_SUBJECT: localAuth.subject ?? '',
   };
 }
+
+async function accessToken(
+  email = 'trainer@example.com',
+  subject = 'access-subject-trainer',
+  audience = ACCESS_AUD,
+): Promise<string> {
+  return new SignJWT({ email })
+    .setProtectedHeader({ alg: 'RS256', kid: KEY_ID })
+    .setIssuer(ACCESS_ISSUER)
+    .setAudience(audience)
+    .setSubject(subject)
+    .setIssuedAt()
+    .setExpirationTime('5m')
+    .sign(signingKey);
+}
+
+async function authorizedRequest(url: string, init: RequestInit = {}): Promise<Request> {
+  const headers = new Headers(init.headers);
+  headers.set('Cf-Access-Jwt-Assertion', await accessToken());
+  return new Request(url, { ...init, headers });
+}
+
+beforeAll(async () => {
+  const keyPair = await generateKeyPair('RS256');
+  signingKey = keyPair.privateKey;
+  const publicJwk = await exportJWK(keyPair.publicKey);
+
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (input: string | URL | Request) => {
+      const url = input instanceof Request ? input.url : input.toString();
+      if (url === `${ACCESS_ISSUER}/cdn-cgi/access/certs`) {
+        return Response.json({
+          keys: [{ ...publicJwk, kid: KEY_ID, alg: 'RS256', use: 'sig' }],
+        });
+      }
+      throw new Error(`Unexpected fetch in Worker test: ${url}`);
+    }),
+  );
+});
+
+afterAll(() => {
+  vi.unstubAllGlobals();
+});
 
 describe('AI workout Worker', () => {
   it('returns an uncached Access session without consuming the AI rate limit', async () => {
@@ -14,13 +94,13 @@ describe('AI workout Worker', () => {
 
     for (let attempt = 0; attempt < 25; attempt += 1) {
       const response = await worker.fetch(
-        new Request('https://example.com/api/auth/session', {
+        await authorizedRequest('https://example.com/api/auth/session', {
           headers: {
             'CF-Connecting-IP': '198.51.100.20',
-            'Cf-Access-Authenticated-User-Email': 'trainer@example.com',
+            'Cf-Access-Authenticated-User-Email': 'spoofed@example.com',
           },
         }),
-        env,
+        env as Env,
       );
       expect(response.status).toBe(200);
       expect(response.headers.get('Cache-Control')).toContain('no-store');
@@ -31,17 +111,99 @@ describe('AI workout Worker', () => {
     }
 
     expect(env.AI.run).not.toHaveBeenCalled();
+    expect(env.DB.prepare).toHaveBeenCalledTimes(25);
   });
 
   it('rejects non-GET session checks', async () => {
     const env = environment({});
     const response = await worker.fetch(
-      new Request('https://example.com/api/auth/session', { method: 'POST' }),
-      env,
+      await authorizedRequest('https://example.com/api/auth/session', { method: 'POST' }),
+      env as Env,
     );
 
     expect(response.status).toBe(405);
     expect(response.headers.get('Allow')).toBe('GET');
+  });
+
+  it('loads only the authenticated owner data and never accepts an owner from the request', async () => {
+    const env = environment({});
+    const response = await worker.fetch(
+      await authorizedRequest('https://example.com/api/data?ownerUserId=someone-else'),
+      env as Env,
+    );
+    const body = (await response.json()) as { hasData: boolean; snapshot: { clients: unknown[] } };
+
+    expect(response.status).toBe(200);
+    expect(body).toMatchObject({ hasData: false, snapshot: { clients: [] } });
+    const preparedSql = env.DB.prepare.mock.calls.map(([sql]) => String(sql));
+    expect(preparedSql.filter((sql) => sql.startsWith('SELECT *')).every((sql) =>
+      sql.includes('WHERE owner_user_id = ?1'),
+    )).toBe(true);
+    expect(env.DB.batch).toHaveBeenCalledOnce();
+  });
+
+  it('rejects API calls without an Access JWT', async () => {
+    const env = environment({});
+    const response = await worker.fetch(
+      new Request('https://example.com/api/auth/session'),
+      env as Env,
+    );
+
+    expect(response.status).toBe(401);
+    expect(await response.json()).toMatchObject({ authenticated: false });
+    expect(env.DB.prepare).not.toHaveBeenCalled();
+  });
+
+  it('rejects an otherwise valid token issued for another Access application', async () => {
+    const env = environment({});
+    const response = await worker.fetch(
+      new Request('https://example.com/api/auth/session', {
+        headers: { 'Cf-Access-Jwt-Assertion': await accessToken(undefined, undefined, 'wrong-aud') },
+      }),
+      env as Env,
+    );
+
+    expect(response.status).toBe(401);
+  });
+
+  it('uses the configured development identity only on an exact loopback hostname', async () => {
+    const env = environment(
+      {},
+      {
+        enabled: 'true',
+        email: 'local.trainer@example.test',
+        subject: 'local-trainer',
+      },
+    );
+    const response = await worker.fetch(
+      new Request('http://127.0.0.1:8787/api/auth/session'),
+      env as Env,
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      authenticated: true,
+      email: 'local.trainer@example.test',
+    });
+    expect(env.DB.prepare).toHaveBeenCalledOnce();
+  });
+
+  it('never enables the development identity on a deployed hostname', async () => {
+    const env = environment(
+      {},
+      {
+        enabled: 'true',
+        email: 'local.trainer@example.test',
+        subject: 'local-trainer',
+      },
+    );
+    const response = await worker.fetch(
+      new Request('https://ultimate-fitnezz-app.hushed-candy.workers.dev/api/auth/session'),
+      env as Env,
+    );
+
+    expect(response.status).toBe(401);
+    expect(env.DB.prepare).not.toHaveBeenCalled();
   });
 
   it('normalizes known exercise IDs and turns unknown IDs into reviewable new exercises', async () => {
@@ -99,7 +261,7 @@ describe('AI workout Worker', () => {
         ],
       },
     });
-    const request = new Request('https://example.com/api/ai/workout-recommendation', {
+    const request = await authorizedRequest('https://example.com/api/ai/workout-recommendation', {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'CF-Connecting-IP': '198.51.100.10' },
       body: JSON.stringify({
@@ -117,7 +279,7 @@ describe('AI workout Worker', () => {
       }),
     });
 
-    const response = await worker.fetch(request, env);
+    const response = await worker.fetch(request, env as Env);
     const body = (await response.json()) as { exercises: Array<Record<string, unknown>> };
 
     expect(response.status).toBe(200);
@@ -138,7 +300,7 @@ describe('AI workout Worker', () => {
     const env = environment({});
     env.AI.run.mockRejectedValueOnce(new Error('Workers AI error 3007: Request timeout'));
     const response = await worker.fetch(
-      new Request('https://example.com/api/ai/workout-recommendation', {
+      await authorizedRequest('https://example.com/api/ai/workout-recommendation', {
         method: 'POST',
         headers: { 'content-type': 'application/json', 'CF-Connecting-IP': '198.51.100.12' },
         body: JSON.stringify({
@@ -146,7 +308,7 @@ describe('AI workout Worker', () => {
           exerciseCatalog: [],
         }),
       }),
-      env,
+      env as Env,
     );
     const body = (await response.json()) as { error: string; requestId: string };
 
@@ -158,12 +320,12 @@ describe('AI workout Worker', () => {
   it('rejects underspecified requests before invoking AI', async () => {
     const env = environment({});
     const response = await worker.fetch(
-      new Request('https://example.com/api/ai/workout-recommendation', {
+      await authorizedRequest('https://example.com/api/ai/workout-recommendation', {
         method: 'POST',
         headers: { 'content-type': 'application/json', 'CF-Connecting-IP': '198.51.100.11' },
         body: JSON.stringify({ prompt: 'No', exerciseCatalog: [] }),
       }),
-      env,
+      env as Env,
     );
 
     expect(response.status).toBe(400);
@@ -172,7 +334,10 @@ describe('AI workout Worker', () => {
 
   it('delegates non-API requests to the static asset binding', async () => {
     const env = environment({});
-    const response = await worker.fetch(new Request('https://example.com/workouts/recommend'), env);
+    const response = await worker.fetch(
+      new Request('https://example.com/workouts/recommend'),
+      env as Env,
+    );
 
     expect(await response.text()).toBe('app asset');
     expect(env.ASSETS.fetch).toHaveBeenCalledOnce();

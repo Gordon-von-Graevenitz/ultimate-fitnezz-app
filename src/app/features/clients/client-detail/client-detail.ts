@@ -5,7 +5,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { map } from 'rxjs';
 
 import { LocalDataStore } from '../../../core/data/local-data.store';
-import { ClientGoal, GoalCategory, ProgressPhoto } from '../../../core/models/fitness.models';
+import { ClientGoal, GoalCategory } from '../../../core/models/fitness.models';
 
 type DetailTab = 'overview' | 'workouts' | 'progress';
 
@@ -25,9 +25,6 @@ export class ClientDetail {
   readonly activeTab = signal<DetailTab>('overview');
   readonly isMeasurementOpen = signal(false);
   readonly isGoalOpen = signal(false);
-  readonly isPhotoOpen = signal(false);
-  readonly photoPreview = signal('');
-  readonly photoFileName = signal('');
 
   readonly client = computed(() => this.store.clients().find((item) => item.id === this.clientId()));
   readonly goals = computed(() =>
@@ -40,12 +37,6 @@ export class ClientDetail {
   readonly measurements = computed(() =>
     this.store
       .measurements()
-      .filter((item) => item.clientId === this.clientId())
-      .sort((a, b) => b.recordedAt.localeCompare(a.recordedAt)),
-  );
-  readonly photos = computed(() =>
-    this.store
-      .progressPhotos()
       .filter((item) => item.clientId === this.clientId())
       .sort((a, b) => b.recordedAt.localeCompare(a.recordedAt)),
   );
@@ -88,12 +79,6 @@ export class ClientDetail {
     unit: new FormControl('', { nonNullable: true }),
     targetDate: new FormControl('', { nonNullable: true }),
     notes: new FormControl('', { nonNullable: true }),
-  });
-
-  readonly photoForm = new FormGroup({
-    recordedAt: new FormControl(this.today(), { nonNullable: true, validators: [Validators.required] }),
-    angle: new FormControl<ProgressPhoto['angle']>('front', { nonNullable: true }),
-    caption: new FormControl('', { nonNullable: true }),
   });
 
   setTab(tab: DetailTab): void {
@@ -156,41 +141,6 @@ export class ClientDetail {
     this.store.updateGoal(goal.id, { status: goal.status === 'achieved' ? 'active' : 'achieved' });
   }
 
-  async choosePhoto(event: Event): Promise<void> {
-    const file = (event.target as HTMLInputElement).files?.[0];
-    if (!file) return;
-    if (file.size > 8 * 1024 * 1024) {
-      this.photoPreview.set('');
-      this.photoFileName.set('');
-      return;
-    }
-
-    try {
-      this.photoPreview.set(await this.createLocalPhotoPreview(file));
-      this.photoFileName.set(file.name);
-    } catch {
-      this.photoPreview.set('');
-      this.photoFileName.set('');
-    }
-  }
-
-  savePhoto(): void {
-    if (this.photoForm.invalid || !this.clientId() || !this.photoFileName()) return;
-    const value = this.photoForm.getRawValue();
-    this.store.createProgressPhoto({
-      clientId: this.clientId(),
-      recordedAt: value.recordedAt,
-      angle: value.angle,
-      fileName: this.photoFileName(),
-      localPreviewUrl: this.photoPreview(),
-      caption: value.caption.trim() || undefined,
-    });
-    this.isPhotoOpen.set(false);
-    this.photoForm.reset({ recordedAt: this.today(), angle: 'front', caption: '' });
-    this.photoPreview.set('');
-    this.photoFileName.set('');
-  }
-
   goalProgress(goal: ClientGoal): number {
     if (goal.status === 'achieved') return 100;
     if (!goal.targetValue || goal.currentValue === undefined) return 0;
@@ -219,37 +169,4 @@ export class ClientDetail {
     return new Date().toISOString().slice(0, 10);
   }
 
-  private createLocalPhotoPreview(file: File): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onerror = () => reject(reader.error);
-      reader.onload = () => {
-        if (typeof reader.result !== 'string') {
-          reject(new Error('Photo could not be read'));
-          return;
-        }
-
-        const image = new Image();
-        image.onerror = () => reject(new Error('Photo could not be decoded'));
-        image.onload = () => {
-          const maxSide = 900;
-          const scale = Math.min(1, maxSide / Math.max(image.naturalWidth, image.naturalHeight));
-          const canvas = document.createElement('canvas');
-          canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
-          canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
-          const context = canvas.getContext('2d');
-          if (!context) {
-            reject(new Error('Photo preview is unavailable'));
-            return;
-          }
-          context.fillStyle = '#ffffff';
-          context.fillRect(0, 0, canvas.width, canvas.height);
-          context.drawImage(image, 0, 0, canvas.width, canvas.height);
-          resolve(canvas.toDataURL('image/jpeg', 0.76));
-        };
-        image.src = reader.result;
-      };
-      reader.readAsDataURL(file);
-    });
-  }
 }

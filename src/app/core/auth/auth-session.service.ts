@@ -26,6 +26,7 @@ export class AuthSessionService {
 
   readonly status = signal<AuthStatus>(this.sessionRequired ? 'checking' : 'authenticated');
   readonly email = signal<string | null>(null);
+  readonly remoteSessionRequired = this.sessionRequired;
 
   async initialize(): Promise<void> {
     const authenticated = await this.verifySession(true);

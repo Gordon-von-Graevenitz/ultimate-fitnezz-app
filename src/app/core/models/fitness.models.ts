@@ -62,19 +62,6 @@ export interface BodyMeasurement {
   readonly updatedAt: IsoDateString;
 }
 
-/** Metadata plus an optional compressed data URL stored only on this device. */
-export interface ProgressPhoto {
-  readonly id: EntityId;
-  readonly clientId: EntityId;
-  readonly recordedAt: IsoDateString;
-  readonly angle: 'front' | 'side' | 'back' | 'other';
-  readonly fileName: string;
-  readonly localPreviewUrl?: string;
-  readonly caption?: string;
-  readonly createdAt: IsoDateString;
-  readonly updatedAt: IsoDateString;
-}
-
 export interface Exercise {
   readonly id: EntityId;
   readonly name: string;
@@ -156,7 +143,6 @@ export interface FitnessDataSnapshot {
   readonly clients: readonly Client[];
   readonly goals: readonly ClientGoal[];
   readonly measurements: readonly BodyMeasurement[];
-  readonly progressPhotos: readonly ProgressPhoto[];
   readonly exercises: readonly Exercise[];
   readonly workoutTemplates: readonly WorkoutTemplate[];
   readonly workoutSessions: readonly WorkoutSession[];
@@ -171,10 +157,6 @@ export type UpdateGoalInput = Partial<
 export type CreateMeasurementInput = Omit<BodyMeasurement, 'id' | 'createdAt' | 'updatedAt'>;
 export type UpdateMeasurementInput = Partial<
   Omit<BodyMeasurement, 'id' | 'clientId' | 'createdAt' | 'updatedAt'>
->;
-export type CreateProgressPhotoInput = Omit<ProgressPhoto, 'id' | 'createdAt' | 'updatedAt'>;
-export type UpdateProgressPhotoInput = Partial<
-  Omit<ProgressPhoto, 'id' | 'clientId' | 'createdAt' | 'updatedAt'>
 >;
 export type CreateExerciseInput = Omit<Exercise, 'id' | 'createdAt' | 'updatedAt'>;
 export type UpdateExerciseInput = Partial<Omit<Exercise, 'id' | 'createdAt' | 'updatedAt'>>;

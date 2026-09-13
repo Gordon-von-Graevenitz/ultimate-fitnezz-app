@@ -1,6 +1,7 @@
 import { Component, inject, signal } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { AuthSessionService } from './core/auth/auth-session.service';
+import { LocalDataStore } from './core/data/local-data.store';
 
 @Component({
   selector: 'app-root',
@@ -10,6 +11,7 @@ import { AuthSessionService } from './core/auth/auth-session.service';
 })
 export class App {
   protected readonly auth = inject(AuthSessionService);
+  protected readonly data = inject(LocalDataStore);
   protected readonly menuOpen = signal(false);
 
   protected closeMenu(): void {
@@ -18,5 +20,13 @@ export class App {
 
   protected signIn(): void {
     this.auth.redirectToSignIn(true);
+  }
+
+  protected importDeviceData(): void {
+    void this.data.importDeviceData();
+  }
+
+  protected retryCloudSync(): void {
+    this.data.retryCloudSync();
   }
 }

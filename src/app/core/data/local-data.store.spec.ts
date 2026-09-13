@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { LOCAL_DATA_STORAGE, LOCAL_DATA_STORAGE_KEY, LocalDataStore } from './local-data.store';
+import { FitnessDataApi } from './fitness-data.api';
 
 class MemoryStorage implements Storage {
   private readonly values = new Map<string, string>();
@@ -30,10 +31,32 @@ class MemoryStorage implements Storage {
   }
 }
 
-function createStore(storage: Storage | null = new MemoryStorage()): LocalDataStore {
+function createStore(
+  storage: Storage | null = new MemoryStorage(),
+  api: Pick<FitnessDataApi, 'load' | 'save'> = {
+    load: async () => ({
+      hasData: false,
+      updatedAt: null,
+      snapshot: {
+        schemaVersion: 1,
+        clients: [],
+        goals: [],
+        measurements: [],
+        exercises: [],
+        workoutTemplates: [],
+        workoutSessions: [],
+      },
+    }),
+    save: async (snapshot) => ({ hasData: true, updatedAt: new Date().toISOString(), snapshot }),
+  },
+): LocalDataStore {
   TestBed.resetTestingModule();
   TestBed.configureTestingModule({
-    providers: [LocalDataStore, { provide: LOCAL_DATA_STORAGE, useValue: storage }],
+    providers: [
+      LocalDataStore,
+      { provide: LOCAL_DATA_STORAGE, useValue: storage },
+      { provide: FitnessDataApi, useValue: api },
+    ],
   });
   return TestBed.inject(LocalDataStore);
 }
@@ -92,7 +115,6 @@ describe('LocalDataStore', () => {
     expect(store.clientById(clientId)).toBeUndefined();
     expect(store.goalsForClient(clientId)).toHaveLength(0);
     expect(store.measurementsForClient(clientId)).toHaveLength(0);
-    expect(store.photosForClient(clientId)).toHaveLength(0);
     expect(store.sessionsForClient(clientId)).toHaveLength(0);
   });
 
@@ -113,5 +135,74 @@ describe('LocalDataStore', () => {
     store.resetToDemoData();
 
     expect(store.clientById('client-maya')).toBeDefined();
+  });
+
+  it('requires an explicit import before sending existing device data to an empty account', async () => {
+    const storage = new MemoryStorage();
+    const firstStore = createStore(storage);
+    firstStore.createClient({
+      firstName: 'Ari',
+      lastName: 'Nguyen',
+      email: 'ari@example.com',
+      joinedAt: '2026-08-02',
+      status: 'active',
+      avatarColor: '#335C67',
+    });
+    const save = vi.fn(async (snapshot) => ({
+      hasData: true,
+      updatedAt: '2026-09-13T12:00:00.000Z',
+      snapshot,
+    }));
+    const store = createStore(storage, {
+      load: async () => ({
+        hasData: false,
+        updatedAt: null,
+        snapshot: {
+          schemaVersion: 1,
+          clients: [],
+          goals: [],
+          measurements: [],
+          exercises: [],
+          workoutTemplates: [],
+          workoutSessions: [],
+        },
+      }),
+      save,
+    });
+
+    await store.initializeCloudSync(true);
+
+    expect(store.migrationPending()).toBe(true);
+    expect(save).not.toHaveBeenCalled();
+    expect(store.clients().some((client) => client.email === 'ari@example.com')).toBe(true);
+
+    await store.importDeviceData();
+
+    expect(save).toHaveBeenCalledOnce();
+    expect(store.cloudSyncStatus()).toBe('synced');
+  });
+
+  it('does not reveal an unscoped legacy copy when a signed-in account cannot reach the cloud', async () => {
+    const storage = new MemoryStorage();
+    const legacyStore = createStore(storage);
+    legacyStore.createClient({
+      firstName: 'Private',
+      lastName: 'Client',
+      email: 'private@example.com',
+      joinedAt: '2026-08-02',
+      status: 'active',
+      avatarColor: '#335C67',
+    });
+    const signedInStore = createStore(storage, {
+      load: async () => {
+        throw new Error('offline');
+      },
+      save: async (snapshot) => ({ hasData: true, updatedAt: null, snapshot }),
+    });
+
+    await signedInStore.initializeCloudSync(true, 'different.trainer@example.com');
+
+    expect(signedInStore.cloudSyncStatus()).toBe('error');
+    expect(signedInStore.clients()).toHaveLength(0);
   });
 });

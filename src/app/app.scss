@@ -45,6 +45,56 @@
   min-height: 100dvh;
 }
 
+.sync-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.8rem clamp(1rem, 4vw, 3.5rem);
+  border-bottom: 1px solid color-mix(in srgb, var(--brand-gold) 45%, var(--line));
+  background: color-mix(in srgb, var(--brand-gold) 13%, var(--surface));
+}
+
+.sync-banner > div {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.sync-banner span,
+.sync-banner small {
+  color: var(--muted-ink);
+  font-size: 0.78rem;
+}
+
+.sync-banner.error {
+  border-color: #efc7c7;
+  background: #fff2f2;
+}
+
+.sync-banner button {
+  flex: none;
+  padding: 0.55rem 0.9rem;
+  border: 0;
+  border-radius: 999px;
+  color: #fff;
+  background: var(--accent);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.sync-toast {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 40;
+  padding: 0.55rem 0.8rem;
+  border-radius: 999px;
+  color: #fff;
+  background: var(--ink);
+  font-size: 0.78rem;
+  box-shadow: var(--shadow-lg);
+}
+
 .topbar {
   position: sticky;
   top: 0;
@@ -194,6 +244,15 @@
 }
 
 @media (max-width: 760px) {
+  .sync-banner {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .sync-banner button {
+    width: 100%;
+  }
+
   .topbar {
     min-height: 4rem;
     gap: 0.8rem;

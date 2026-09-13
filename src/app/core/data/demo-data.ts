@@ -190,38 +190,6 @@ export const DEMO_FITNESS_DATA: FitnessDataSnapshot = {
       updatedAt: '2026-06-02T16:30:00.000Z',
     },
   ],
-  progressPhotos: [
-    {
-      id: 'photo-maya-front-may',
-      clientId: 'client-maya',
-      recordedAt: '2026-05-12',
-      angle: 'front',
-      fileName: 'maya-front-2026-05-12.jpg',
-      caption: 'Starting reference',
-      createdAt: CREATED_AT,
-      updatedAt: CREATED_AT,
-    },
-    {
-      id: 'photo-maya-front-july',
-      clientId: 'client-maya',
-      recordedAt: '2026-07-14',
-      angle: 'front',
-      fileName: 'maya-front-2026-07-14.jpg',
-      caption: 'Eight-week check-in',
-      createdAt: '2026-07-14T07:20:00.000Z',
-      updatedAt: '2026-07-14T07:20:00.000Z',
-    },
-    {
-      id: 'photo-leon-side-july',
-      clientId: 'client-leon',
-      recordedAt: '2026-07-21',
-      angle: 'side',
-      fileName: 'leon-side-2026-07-21.jpg',
-      caption: 'Mid-program reference',
-      createdAt: '2026-07-21T08:05:00.000Z',
-      updatedAt: '2026-07-21T08:05:00.000Z',
-    },
-  ],
   exercises: [
     {
       id: 'exercise-back-squat',

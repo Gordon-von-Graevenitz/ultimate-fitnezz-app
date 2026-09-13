@@ -11,10 +11,10 @@ The workout assistant runs entirely through the existing Cloudflare Worker:
 
 Cloudflare Git builds should use:
 
-- Build command: `pnpm run build`
-- Deploy command: `pnpm exec wrangler deploy`
+- Build command: `npm run build`
+- Deploy command: `npx wrangler deploy`
 
-For a local production-style preview, authenticate Wrangler first with `pnpm exec wrangler login`, then run `pnpm run preview:cloudflare` and open the URL shown by Wrangler. Workers AI uses a remote binding during local development, so an authenticated Cloudflare session is required. `ng serve` only serves the Angular browser bundle and does not run the `/api` routes.
+For a local production-style preview, authenticate Wrangler first with `npx wrangler login`, then run `npm run preview:cloudflare` and open the URL shown by Wrangler. Use `npm run preview:cloudflare:ai` only when you intentionally want the remote Workers AI binding. `ng serve` only serves the Angular browser bundle and does not run the `/api` routes.
 
 Workers AI includes a daily free allocation. When a free-plan account reaches its allocation, AI requests fail until the daily reset rather than switching to paid usage.
 
